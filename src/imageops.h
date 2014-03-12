@@ -22,7 +22,10 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <Magick++.h>
 #include "imagepatch.h"
+
+cv::Mat magickImread(const std::string& filename);
 
 cv::Mat meanimg(const std::vector<std::string>& files, bool showProgress = false);
 

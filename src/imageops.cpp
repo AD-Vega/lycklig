@@ -20,8 +20,18 @@
 
 using namespace cv;
 
+Mat magickImread(const std::string& filename)
+{
+  Magick::Image image;
+  image.read(filename);
+  cv::Mat output(image.rows(), image.columns(), CV_32FC3);
+  image.write(0, 0, image.columns(), image.rows(),
+                 "BGR", Magick::FloatPixel, output.data);
+  return output;
+}
+
 Mat meanimg(const std::vector<std::string>& files, bool showProgress) {
-  Mat sample = imread(files.at(0));
+  Mat sample = magickImread(files.at(0));
   Mat imgmean(Mat::zeros(sample.size(), CV_MAKETYPE(CV_32F, sample.channels())));
   int progress = 0;
   #pragma omp parallel
@@ -34,7 +44,7 @@ Mat meanimg(const std::vector<std::string>& files, bool showProgress) {
         #pragma omp critical
         fprintf(stderr, "\r\033[K%d/%ld", ++progress, files.size());
       }
-      accumulate(imread(files.at(i)), localsum);
+      accumulate(magickImread(files.at(i)), localsum);
     }
     #pragma omp critical
     accumulate(localsum, imgmean);

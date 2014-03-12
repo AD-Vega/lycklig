@@ -31,7 +31,9 @@ int main(int argc, char *argv[]) {
   registrationParams params;
   if (!params.parse(argc, argv))
     return 1;
- 
+
+  Magick::InitializeMagick(NULL);
+
   fprintf(stderr, "%ld input files listed\n", params.files.size());
   Mat refimg;
   meanimg(params.files, true).convertTo(refimg, CV_32F);
@@ -54,7 +56,7 @@ int main(int argc, char *argv[]) {
       fprintf(stderr, "\r\033[K%d/%ld", ++progress, params.files.size());
 
       Mat imgcolor;
-      imread(params.files.at(ifile).c_str()).convertTo(imgcolor, CV_32F);
+      magickImread(params.files.at(ifile).c_str()).convertTo(imgcolor, CV_32F);
       Mat1f img;
       cvtColor(imgcolor, img, CV_BGR2GRAY);
       Mat1f shifts(findShifts(img, patches, areas));
