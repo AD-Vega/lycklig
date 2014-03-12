@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.8)
 
 find_package(OpenCV REQUIRED)
 include(FindPkgConfig)
-pkg_check_modules(PKGCONFS REQUIRED tclap GraphicsMagick++)
+pkg_check_modules(PKGCONFS REQUIRED tclap Magick++)
 
 macro(set_prefixed varname string)
   set(${varname})
