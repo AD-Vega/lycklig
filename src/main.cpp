@@ -20,6 +20,7 @@
 #include <cstdio>
 #include <vector>
 #include <string>
+#include <algorithm>
 #include <omp.h>
 #include "imageops.h"
 #include "rbfwarper.h"
@@ -35,8 +36,21 @@ int main(int argc, char *argv[]) {
   Magick::InitializeMagick(NULL);
 
   fprintf(stderr, "%ld input files listed\n", params.files.size());
+
+  vector<Point> globalShifts;
+  Rect crop(Point(0, 0), Size(0, 0));
+
+  if (params.prereg) {
+    Mat globalRefimg(grayReader().read(params.prereg_img));
+    if (params.prereg_maxmove == 0) {
+      params.prereg_maxmove = std::min(globalRefimg.rows, globalRefimg.cols)/2;
+    }
+    globalShifts = getGlobalShifts(params.files, globalRefimg, params.prereg_maxmove, true);
+        crop = optimalCrop(globalShifts, globalRefimg.size());
+  }
+
   Mat refimg;
-  meanimg(params.files, true).convertTo(refimg, CV_32F);
+  meanimg(params.files, crop, globalShifts, true).convertTo(refimg, CV_32F);
   cvtColor(refimg, refimg, CV_BGR2GRAY);
 
   const unsigned int xydiff = params.boxsize/2;
@@ -57,6 +71,8 @@ int main(int argc, char *argv[]) {
 
       Mat imgcolor;
       magickImread(params.files.at(ifile).c_str()).convertTo(imgcolor, CV_32F);
+      if (params.prereg)
+        imgcolor = imgcolor(crop + globalShifts.at(ifile));
       Mat1f img;
       cvtColor(imgcolor, img, CV_BGR2GRAY);
       Mat1f shifts(findShifts(img, patches, areas));

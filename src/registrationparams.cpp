@@ -43,6 +43,17 @@ bool registrationParams::parse(int argc, char* argv[])
   try
   {
     TCLAP::CmdLine cmd("Registration of planetary images");
+    TCLAP::ValueArg<std::string> arg_prereg_img(
+      "p", "prereg-img", "Preregister using this image as the reference.", false, "", "filename");
+    cmd.add(arg_prereg_img);
+    TCLAP::SwitchArg arg_prereg_first(
+      "1", "prereg-first", "Preregister using the first image as the reference.", false);
+    cmd.add(arg_prereg_first);
+    TCLAP::ValueArg<unsigned int> arg_prereg_maxmove(
+      "x", "prereg-maxmove", "Maximum displacement in pre-registering. Zero means half "
+                             "of the images' smallest size; this is also the default.",
+                             false, prereg_maxmove, "pixels");
+    cmd.add(arg_prereg_maxmove);
     TCLAP::ValueArg<unsigned int> arg_boxsize(
       "b", "boxsize", "Box size " + defval(boxsize), false, boxsize, "pixels");
     cmd.add(arg_boxsize);
@@ -70,6 +81,20 @@ bool registrationParams::parse(int argc, char* argv[])
     maxmove = arg_maxmove.getValue();
     output_file = arg_output_file.getValue();
     files = arg_files.getValue();
+
+    if (arg_prereg_img.isSet() + arg_prereg_first.isSet() > 1) {
+      std::cerr << "PARSE ERROR: arguments --prereg-img and --prereg-first\n"
+                << "             are mutually exclusive!" << std::endl;
+      return false;
+    }
+    if (arg_prereg_img.isSet()) {
+      prereg = true;
+      prereg_img = arg_prereg_img.getValue();
+    }
+    else if (arg_prereg_first.isSet()) {
+      prereg = true;
+      prereg_img = files.at(0);
+    }
   }
   catch (TCLAP::ArgException &e)
   {

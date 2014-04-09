@@ -22,12 +22,44 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <string>
 #include <Magick++.h>
 #include "imagepatch.h"
 
+class grayReader {
+public:
+  // NOT THREAD SAFE!
+  cv::Mat read(std::string file);
+
+private:
+  cv::Mat imgcolor;
+  cv::Mat1f imggray;
+};
+
+class globalRegistrator {
+public:
+  globalRegistrator(const cv::Mat& reference, const int maxmove);
+
+  // NOT THREAD SAFE!
+  cv::Point findShift(const cv::Mat& img);
+
+private:
+  cv::Mat1f refImgWithBorder;
+  cv::Mat1f refImageArea;
+  cv::Mat1f searchMask;
+  cv::Mat1f areasq;
+  cv::Mat1f cor;
+  cv::Mat1f weight;
+  cv::Mat1f match;
+  cv::Point originShift;
+};
+
 cv::Mat magickImread(const std::string& filename);
 
-cv::Mat meanimg(const std::vector<std::string>& files, bool showProgress = false);
+cv::Mat meanimg(const std::vector<std::string>& files,
+            cv::Rect crop,
+            std::vector<cv::Point> shifts,
+            bool showProgress = false);
 
 std::vector<imagePatch> selectPointsHex(const cv::Mat img,
                                         const unsigned int boxsize,
@@ -44,5 +76,12 @@ std::vector<cv::Rect> createSearchAreas(const std::vector<imagePatch>& patches,
 cv::Mat1f findShifts(const cv::Mat& img,
                      const std::vector<imagePatch>& patches,
                      const std::vector<cv::Rect>& areas);
+
+std::vector<cv::Point> getGlobalShifts(const std::vector<std::string>& files,
+                                       const cv::Mat& refimg,
+                                       unsigned int maxmove,
+                                       bool showProgress = false);
+
+cv::Rect optimalCrop(std::vector<cv::Point> shifts, cv::Size size);
 
 #endif // IMAGEOPS_H

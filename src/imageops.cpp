@@ -30,9 +30,26 @@ Mat magickImread(const std::string& filename)
   return output;
 }
 
-Mat meanimg(const std::vector<std::string>& files, bool showProgress) {
+Mat grayReader::read(string file) {
+  magickImread(file.c_str()).convertTo(imgcolor, CV_32F);
+  cvtColor(imgcolor, imggray, CV_BGR2GRAY);
+  return imggray;
+}
+
+Mat meanimg(const std::vector<std::string>& files,
+            Rect crop,
+            vector<Point> shifts,
+            bool showProgress) {
   Mat sample = magickImread(files.at(0));
-  Mat imgmean(Mat::zeros(sample.size(), CV_MAKETYPE(CV_32F, sample.channels())));
+  bool doCrop;
+  if (crop.size() == Size(0, 0)) {
+    doCrop = false;
+    crop = Rect(Point(0, 0), sample.size());
+  }
+  else {
+    doCrop = true;
+  }
+  Mat imgmean(Mat::zeros(crop.size(), CV_MAKETYPE(CV_32F, sample.channels())));
   int progress = 0;
   #pragma omp parallel
   {
@@ -44,7 +61,11 @@ Mat meanimg(const std::vector<std::string>& files, bool showProgress) {
         #pragma omp critical
         fprintf(stderr, "\r\033[K%d/%ld", ++progress, files.size());
       }
-      accumulate(magickImread(files.at(i)), localsum);
+      Mat img = magickImread(files.at(i));
+      if (doCrop)
+        accumulate(img(crop + shifts.at(i)), localsum);
+      else
+        accumulate(img, localsum);
     }
     #pragma omp critical
     accumulate(localsum, imgmean);
@@ -135,4 +156,68 @@ Mat1f findShifts(const Mat& img,
     shifts.at<float>(i, 1) = minpoint.y;
   }
   return shifts;
+}
+
+
+globalRegistrator::globalRegistrator(const Mat& reference, const int maxmove) {
+  refImgWithBorder = Mat::zeros(reference.rows + 2*maxmove, reference.cols + 2*maxmove, CV_32F);
+  Rect imageRect = Rect(maxmove, maxmove, reference.cols, reference.rows);
+  reference.copyTo(refImgWithBorder(imageRect));
+  refImageArea = Mat::zeros(reference.rows + 2*maxmove, reference.cols + 2*maxmove, CV_32F);
+  refImageArea(imageRect) = Mat::ones(reference.rows, reference.cols, CV_32F);
+  searchMask = Mat::ones(reference.rows, reference.cols, CV_32F);
+  matchTemplate(refImgWithBorder.mul(refImgWithBorder), searchMask, areasq, CV_TM_CCORR);
+  matchTemplate(refImageArea, searchMask, weight, CV_TM_CCORR);
+  weight = 1/weight;
+  originShift = Point(maxmove, maxmove);
+}
+
+
+Point globalRegistrator::findShift(const Mat& img)
+{
+  matchTemplate(refImgWithBorder, img, cor, CV_TM_CCORR);
+  match = (areasq - (cor.mul(cor) / sum(img.mul(img))[0])).mul(weight);
+  Point minpoint;
+  minMaxLoc(match, NULL, NULL, &minpoint);
+  return -(minpoint - originShift);
+}
+
+
+std::vector<Point> getGlobalShifts(const std::vector<std::string>& files,
+                                   const Mat& refimg,
+                                   unsigned int maxmove,
+                                   bool showProgress) {
+  std::vector<Point> shifts(files.size());
+  int progress = 0;
+  #pragma omp parallel
+  {
+    grayReader reader;
+    globalRegistrator globalReg(refimg, maxmove);
+    #pragma omp for schedule(dynamic)
+    for (int ifile = 0; ifile < (signed)files.size(); ifile++) {
+      if (showProgress) {
+        #pragma omp critical
+        fprintf(stderr, "\r\033[K%d/%ld", ++progress, files.size());
+      }
+      Mat img(reader.read(files.at(ifile)));
+      Point shift = globalReg.findShift(img);
+      #pragma omp critical
+      shifts.at(ifile) = shift;
+    }
+  }
+  if (showProgress)
+    fprintf(stderr, "\n");
+
+  return shifts;
+}
+
+Rect optimalCrop(std::vector<Point> shifts, Size size) {
+  Rect crop(shifts.at(0), size);
+  Rect origin(shifts.at(0), size);
+  for (size_t i = 0; i < shifts.size(); i++) {
+        crop &= Rect(shifts.at(i), size);
+        origin |= Rect(shifts.at(i), size);
+  }
+  crop -= crop.tl() + origin.tl();
+  return crop;
 }

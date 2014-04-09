@@ -27,6 +27,9 @@ class registrationParams
 public:
   bool parse(int argc, char *argv[]);
 
+  bool prereg = false;
+  std::string prereg_img;
+  unsigned int prereg_maxmove = 0;
   unsigned int boxsize = 60;
   float val_threshold = 0.3;
   float surf_threshold = 0.4;
