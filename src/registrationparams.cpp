@@ -54,6 +54,9 @@ bool registrationParams::parse(int argc, char* argv[])
                              "of the images' smallest size; this is also the default.",
                              false, prereg_maxmove, "pixels");
     cmd.add(arg_prereg_maxmove);
+    TCLAP::SwitchArg arg_only_stack(
+      "n", "only-stack", "Don't do lucky imaging: only stack (possibly pre-registered) images.", false);
+    cmd.add(arg_only_stack);
     TCLAP::ValueArg<unsigned int> arg_boxsize(
       "b", "boxsize", "Box size " + defval(boxsize), false, boxsize, "pixels");
     cmd.add(arg_boxsize);
@@ -95,6 +98,8 @@ bool registrationParams::parse(int argc, char* argv[])
       prereg = true;
       prereg_img = files.at(0);
     }
+    if (arg_only_stack.isSet())
+      only_stack = true;
   }
   catch (TCLAP::ArgException &e)
   {

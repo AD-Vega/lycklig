@@ -50,9 +50,14 @@ int main(int argc, char *argv[]) {
     crop = optimalCrop(globalShifts, globalRefimg.size());
   }
 
-  fprintf(stderr, "Creating a reference image\n");
+  fprintf(stderr, "Creating a stacked reference image\n");
+  Mat rawRef = meanimg(params.files, crop, globalShifts, true);
+  if (params.only_stack) {
+    imwrite(params.output_file, normalizeTo16Bits(rawRef));
+    return 0;
+  }
   Mat refimg;
-  meanimg(params.files, crop, globalShifts, true).convertTo(refimg, CV_32F);
+  rawRef.convertTo(refimg, CV_32F);
   cvtColor(refimg, refimg, CV_BGR2GRAY);
 
   fprintf(stderr, "Lucky imaging: creating registration patches\n");
