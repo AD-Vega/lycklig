@@ -51,8 +51,8 @@ private:
   cv::Mat1f refImageArea;
   cv::Mat1f searchMask;
   cv::Mat1f areasq;
+  cv::Mat1f imgsq;
   cv::Mat1f cor;
-  cv::Mat1f weight;
   cv::Mat1f match;
   cv::Point originShift;
 };
