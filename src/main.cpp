@@ -65,12 +65,6 @@ int main(int argc, char *argv[]) {
   fprintf(stderr, "Lucky imaging: registration & warping\n");
   Mat finalsum = lucky(params, refimg, crop, globalShifts, patches, areas, rbf);
 
-  double minval, maxval;
-  minMaxLoc(finalsum, &minval, &maxval);
-  finalsum = (finalsum - minval)/(maxval - minval) * ((1<<16)-1);
-  Mat3w imgout;
-  finalsum.convertTo(imgout, CV_16UC3);
-  imwrite(params.output_file, imgout);
-
+  imwrite(params.output_file, normalizeTo16Bits(finalsum));
   return 0;
 }

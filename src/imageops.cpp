@@ -263,3 +263,14 @@ Mat3f lucky(registrationParams params,
 
   return finalsum;
 }
+
+
+Mat3w normalizeTo16Bits(const Mat& inputImg) {
+  Mat img = inputImg.clone();
+  double minval, maxval;
+  minMaxLoc(img, &minval, &maxval);
+  img = (img - minval)/(maxval - minval) * ((1<<16)-1);
+  Mat3w imgout;
+  img.convertTo(imgout, CV_16UC3);
+  return imgout;
+}

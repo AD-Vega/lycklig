@@ -95,4 +95,6 @@ cv::Mat3f lucky(registrationParams params,
                 std::vector<cv::Rect> areas,
                 rbfWarper rbf);
 
+cv::Mat3w normalizeTo16Bits(const cv::Mat& inputImg);
+
 #endif // IMAGEOPS_H
