@@ -45,30 +45,32 @@ int main(int argc, char *argv[]) {
     if (params.prereg_maxmove == 0) {
       params.prereg_maxmove = std::min(globalRefimg.rows, globalRefimg.cols)/2;
     }
+    fprintf(stderr, "Pre-registering\n");
     globalShifts = getGlobalShifts(params.files, globalRefimg, params.prereg_maxmove, true);
-        crop = optimalCrop(globalShifts, globalRefimg.size());
+    crop = optimalCrop(globalShifts, globalRefimg.size());
   }
 
+  fprintf(stderr, "Creating a reference image\n");
   Mat refimg;
   meanimg(params.files, crop, globalShifts, true).convertTo(refimg, CV_32F);
   cvtColor(refimg, refimg, CV_BGR2GRAY);
 
+  fprintf(stderr, "Lucky imaging: creating registration patches\n");
   const unsigned int xydiff = params.boxsize/2;
   auto patches = selectPointsHex(refimg, params.boxsize, xydiff, params.val_threshold, params.surf_threshold);
   fprintf(stderr, "%ld valid patches\n", patches.size());
   auto areas = createSearchAreas(patches, refimg.size(), params.maxmove);
   rbfWarper rbf(patches, refimg.size(), xydiff/2);
 
+  fprintf(stderr, "Lucky imaging: registration & warping\n");
   Mat3f finalsum(Mat3f::zeros(refimg.size()));
   int progress = 0;
+  fprintf(stderr, "0/%ld", params.files.size());
   #pragma omp parallel
   {
     Mat3f localsum(Mat3f::zeros(refimg.size()));
     #pragma omp for schedule(dynamic)
     for (int ifile = 0; ifile < (signed)params.files.size(); ifile++) {
-      #pragma omp critical
-      fprintf(stderr, "\r\033[K%d/%ld", ++progress, params.files.size());
-
       Mat imgcolor;
       magickImread(params.files.at(ifile).c_str()).convertTo(imgcolor, CV_32F);
       if (params.prereg)
@@ -78,6 +80,9 @@ int main(int argc, char *argv[]) {
       Mat1f shifts(findShifts(img, patches, areas));
       Mat imremap(rbf.warp(imgcolor, shifts));
       localsum += imremap;
+
+      #pragma omp critical
+      fprintf(stderr, "\r\033[K%d/%ld", ++progress, params.files.size());
     }
     #pragma omp critical
     finalsum += localsum;

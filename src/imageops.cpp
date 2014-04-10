@@ -51,21 +51,24 @@ Mat meanimg(const std::vector<std::string>& files,
   }
   Mat imgmean(Mat::zeros(crop.size(), CV_MAKETYPE(CV_32F, sample.channels())));
   int progress = 0;
+  fprintf(stderr, "0/%ld", files.size());
   #pragma omp parallel
   {
     Mat localsum(imgmean.clone());
     #pragma omp barrier
     #pragma omp for
     for (int i = 0; i < (signed)files.size(); i++) {
-      if (showProgress) {
-        #pragma omp critical
-        fprintf(stderr, "\r\033[K%d/%ld", ++progress, files.size());
-      }
       Mat img = magickImread(files.at(i));
+
       if (doCrop)
         accumulate(img(crop + shifts.at(i)), localsum);
       else
         accumulate(img, localsum);
+
+      if (showProgress) {
+        #pragma omp critical
+        fprintf(stderr, "\r\033[K%d/%ld", ++progress, files.size());
+      }
     }
     #pragma omp critical
     accumulate(localsum, imgmean);
@@ -189,20 +192,22 @@ std::vector<Point> getGlobalShifts(const std::vector<std::string>& files,
                                    bool showProgress) {
   std::vector<Point> shifts(files.size());
   int progress = 0;
+  fprintf(stderr, "0/%ld", files.size());
   #pragma omp parallel
   {
     grayReader reader;
     globalRegistrator globalReg(refimg, maxmove);
     #pragma omp for schedule(dynamic)
     for (int ifile = 0; ifile < (signed)files.size(); ifile++) {
-      if (showProgress) {
-        #pragma omp critical
-        fprintf(stderr, "\r\033[K%d/%ld", ++progress, files.size());
-      }
       Mat img(reader.read(files.at(ifile)));
       Point shift = globalReg.findShift(img);
       #pragma omp critical
       shifts.at(ifile) = shift;
+
+      if (showProgress) {
+        #pragma omp critical
+        fprintf(stderr, "\r\033[K%d/%ld", ++progress, files.size());
+      }
     }
   }
   if (showProgress)
