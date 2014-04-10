@@ -46,16 +46,16 @@ void rbfWarper::gauss1d(float* ptr, const Range& range, const float sigma) {
 void rbfWarper::prepareBases(const std::vector<imagePatch>& patches,
                              const Size& imagesize,
                              const float sigma) {
-  Mat1f row(1, 2*imagesize.height-1);
-  gauss1d(row.ptr<float>(0), Range(-imagesize.height+1, imagesize.height), sigma);
-  Mat1f col(2*imagesize.width-1, 1);
-  gauss1d(col.ptr<float>(0), Range(-imagesize.width+1, imagesize.width), sigma);
+  Mat1f row(1, 2*imagesize.width-1);
+  gauss1d(row.ptr<float>(0), Range(-imagesize.width+1, imagesize.width), sigma);
+  Mat1f col(2*imagesize.height-1, 1);
+  gauss1d(col.ptr<float>(0), Range(-imagesize.height+1, imagesize.height), sigma);
   Mat1f bigGauss(col*row);
-  Point gaussCenter(imagesize.height, imagesize.width);
+  Point gaussCenter(imagesize.width, imagesize.height);
 
   for (int i = 0; i < (signed)patches.size(); i++) {
     Point baseCenter(patches.at(i).xcenter(), patches.at(i).ycenter());
-    bases.at(i) = Mat1f(bigGauss, Rect(gaussCenter-baseCenter, imagesize));
+    bases.at(i) = bigGauss(Rect(gaussCenter-baseCenter, imagesize));
   }
 }
 
