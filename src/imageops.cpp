@@ -51,7 +51,8 @@ Mat meanimg(const std::vector<std::string>& files,
   }
   Mat imgmean(Mat::zeros(crop.size(), CV_MAKETYPE(CV_32F, sample.channels())));
   int progress = 0;
-  fprintf(stderr, "0/%ld", files.size());
+  if (showProgress)
+    fprintf(stderr, "0/%ld", files.size());
   #pragma omp parallel
   {
     Mat localsum(imgmean.clone());
@@ -192,7 +193,8 @@ std::vector<Point> getGlobalShifts(const std::vector<std::string>& files,
                                    bool showProgress) {
   std::vector<Point> shifts(files.size());
   int progress = 0;
-  fprintf(stderr, "0/%ld", files.size());
+  if (showProgress)
+    fprintf(stderr, "0/%ld", files.size());
   #pragma omp parallel
   {
     grayReader reader;
@@ -234,10 +236,12 @@ Mat3f lucky(registrationParams params,
             std::vector<Point> globalShifts,
             std::vector<imagePatch> patches,
             std::vector<Rect> areas,
-            rbfWarper rbf) {
+            rbfWarper rbf,
+            bool showProgress) {
   Mat3f finalsum(Mat3f::zeros(refimg.size()));
   int progress = 0;
-  fprintf(stderr, "0/%ld", params.files.size());
+  if (showProgress)
+    fprintf(stderr, "0/%ld", params.files.size());
   #pragma omp parallel
   {
     Mat3f localsum(Mat3f::zeros(refimg.size()));
@@ -253,13 +257,16 @@ Mat3f lucky(registrationParams params,
       Mat imremap(rbf.warp(imgcolor, shifts));
       localsum += imremap;
 
-      #pragma omp critical
-      fprintf(stderr, "\r\033[K%d/%ld", ++progress, params.files.size());
+      if (showProgress) {
+        #pragma omp critical
+        fprintf(stderr, "\r\033[K%d/%ld", ++progress, params.files.size());
+      }
     }
     #pragma omp critical
     finalsum += localsum;
   }
-  fprintf(stderr, "\n");
+  if (showProgress)
+    fprintf(stderr, "\n");
 
   return finalsum;
 }

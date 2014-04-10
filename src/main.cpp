@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
   rbfWarper rbf(patches, refimg.size(), xydiff/2);
 
   fprintf(stderr, "Lucky imaging: registration & warping\n");
-  Mat finalsum = lucky(params, refimg, crop, globalShifts, patches, areas, rbf);
+  Mat finalsum = lucky(params, refimg, crop, globalShifts, patches, areas, rbf, true);
 
   imwrite(params.output_file, normalizeTo16Bits(finalsum));
   return 0;

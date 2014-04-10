@@ -93,7 +93,8 @@ cv::Mat3f lucky(registrationParams params,
                 std::vector<cv::Point> globalShifts,
                 std::vector<imagePatch> patches,
                 std::vector<cv::Rect> areas,
-                rbfWarper rbf);
+                rbfWarper rbf,
+                bool showProgress = false);
 
 cv::Mat3w normalizeTo16Bits(const cv::Mat& inputImg);
 
