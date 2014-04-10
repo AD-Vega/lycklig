@@ -63,31 +63,7 @@ int main(int argc, char *argv[]) {
   rbfWarper rbf(patches, refimg.size(), xydiff/2);
 
   fprintf(stderr, "Lucky imaging: registration & warping\n");
-  Mat3f finalsum(Mat3f::zeros(refimg.size()));
-  int progress = 0;
-  fprintf(stderr, "0/%ld", params.files.size());
-  #pragma omp parallel
-  {
-    Mat3f localsum(Mat3f::zeros(refimg.size()));
-    #pragma omp for schedule(dynamic)
-    for (int ifile = 0; ifile < (signed)params.files.size(); ifile++) {
-      Mat imgcolor;
-      magickImread(params.files.at(ifile).c_str()).convertTo(imgcolor, CV_32F);
-      if (params.prereg)
-        imgcolor = imgcolor(crop + globalShifts.at(ifile));
-      Mat1f img;
-      cvtColor(imgcolor, img, CV_BGR2GRAY);
-      Mat1f shifts(findShifts(img, patches, areas));
-      Mat imremap(rbf.warp(imgcolor, shifts));
-      localsum += imremap;
-
-      #pragma omp critical
-      fprintf(stderr, "\r\033[K%d/%ld", ++progress, params.files.size());
-    }
-    #pragma omp critical
-    finalsum += localsum;
-  }
-  fprintf(stderr, "\n");
+  Mat finalsum = lucky(params, refimg, crop, globalShifts, patches, areas, rbf);
 
   double minval, maxval;
   minMaxLoc(finalsum, &minval, &maxval);

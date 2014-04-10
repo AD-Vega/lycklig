@@ -226,3 +226,40 @@ Rect optimalCrop(std::vector<Point> shifts, Size size) {
   crop -= crop.tl() + origin.tl();
   return crop;
 }
+
+
+Mat3f lucky(registrationParams params,
+            Mat refimg,
+            Rect crop,
+            std::vector<Point> globalShifts,
+            std::vector<imagePatch> patches,
+            std::vector<Rect> areas,
+            rbfWarper rbf) {
+  Mat3f finalsum(Mat3f::zeros(refimg.size()));
+  int progress = 0;
+  fprintf(stderr, "0/%ld", params.files.size());
+  #pragma omp parallel
+  {
+    Mat3f localsum(Mat3f::zeros(refimg.size()));
+    #pragma omp for schedule(dynamic)
+    for (int ifile = 0; ifile < (signed)params.files.size(); ifile++) {
+      Mat imgcolor;
+      magickImread(params.files.at(ifile).c_str()).convertTo(imgcolor, CV_32F);
+      if (params.prereg)
+        imgcolor = imgcolor(crop + globalShifts.at(ifile));
+      Mat1f img;
+      cvtColor(imgcolor, img, CV_BGR2GRAY);
+      Mat1f shifts(findShifts(img, patches, areas));
+      Mat imremap(rbf.warp(imgcolor, shifts));
+      localsum += imremap;
+
+      #pragma omp critical
+      fprintf(stderr, "\r\033[K%d/%ld", ++progress, params.files.size());
+    }
+    #pragma omp critical
+    finalsum += localsum;
+  }
+  fprintf(stderr, "\n");
+
+  return finalsum;
+}

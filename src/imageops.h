@@ -25,6 +25,9 @@
 #include <string>
 #include <Magick++.h>
 #include "imagepatch.h"
+#include "registrationparams.h"
+#include "rbfwarper.h"
+
 
 class grayReader {
 public:
@@ -83,5 +86,13 @@ std::vector<cv::Point> getGlobalShifts(const std::vector<std::string>& files,
                                        bool showProgress = false);
 
 cv::Rect optimalCrop(std::vector<cv::Point> shifts, cv::Size size);
+
+cv::Mat3f lucky(registrationParams params,
+                cv::Mat refimg,
+                cv::Rect crop,
+                std::vector<cv::Point> globalShifts,
+                std::vector<imagePatch> patches,
+                std::vector<cv::Rect> areas,
+                rbfWarper rbf);
 
 #endif // IMAGEOPS_H
