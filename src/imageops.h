@@ -74,10 +74,6 @@ std::vector<imagePatch> filterPatchesByQuality(const std::vector<imagePatch> pat
 
 cv::Mat drawPoints(const cv::Mat& img, const std::vector<imagePatch>& patches);
 
-std::vector<cv::Rect> createSearchAreas(const std::vector<imagePatch>& patches,
-                                        const cv::Size& imagesize,
-                                        const int maxmove);
-
 cv::Mat1f findShifts(const cv::Mat& img,
                      const std::vector<imagePatch>& patches,
                      const std::vector<cv::Rect>& areas);
@@ -94,7 +90,6 @@ cv::Mat3f lucky(registrationParams params,
                 cv::Rect crop,
                 std::vector<cv::Point> globalShifts,
                 std::vector<imagePatch> patches,
-                std::vector<cv::Rect> areas,
                 rbfWarper rbf,
                 bool showProgress = false);
 

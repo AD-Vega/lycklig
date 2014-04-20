@@ -85,6 +85,7 @@ std::vector<imagePatch> selectPointsHex(const Mat img,
                                         const unsigned int boxsize,
                                         const unsigned int maxmove) {
   std::vector<imagePatch> patches;
+  Rect imgrect(Point(0, 0), img.size());
   const int xydiff = boxsize/2;
   int yspacing = ceil(xydiff*sqrt(0.75));
   const int xshift = xydiff/2;
@@ -97,7 +98,8 @@ std::vector<imagePatch> selectPointsHex(const Mat img,
       Mat roi(img, Rect(x, y, boxsize, boxsize));
       Mat1f roif;
       roi.convertTo(roif, CV_32F);
-      imagePatch p(x, y, roif);
+      Rect fullSearchArea(Point(x-maxmove, y-maxmove), Point(x+boxsize+maxmove, y+boxsize+maxmove));
+      imagePatch p(x, y, roif, fullSearchArea & imgrect);
       patches.push_back(p);
     }
   }
@@ -130,29 +132,11 @@ Mat drawPoints(const Mat& img, const std::vector<imagePatch>& patches) {
 }
 
 
-std::vector<Rect> createSearchAreas(const std::vector<imagePatch>& patches,
-                                    const Size& imagesize,
-                                    const int maxmove) {
-  std::vector<Rect> areas(patches.size());
-  Rect imgrect(Point(0, 0), imagesize);
-  for (int i = 0; i < (signed)patches.size(); i++) {
-    int x = patches.at(i).x;
-    int y = patches.at(i).y;
-    int width = patches.at(i).image.cols;
-    int height = patches.at(i).image.rows;
-    Rect r(Point(x-maxmove, y-maxmove), Point(x+width+maxmove, y+height+maxmove));
-    areas.at(i) = r & imgrect;
-  }
-  return areas;
-}
-
-
 Mat1f findShifts(const Mat& img,
-                 const std::vector<imagePatch>& patches,
-                 const std::vector<Rect>& areas) {
+                 const std::vector<imagePatch>& patches) {
   Mat1f shifts(patches.size(), 2);
   for (int i = 0; i < (signed)patches.size(); i++) {
-    Mat1f roi(img, areas.at(i));
+    Mat1f roi(img, patches.at(i).searchArea);
     Mat1f patch(patches.at(i).image);
     Mat1f mask = Mat::ones(patch.rows, patch.cols, CV_32F);
     Mat1f areasq;
@@ -162,8 +146,8 @@ Mat1f findShifts(const Mat& img,
     Mat1f match = areasq - (cor.mul(cor) / patches.at(i).sqsum);
     Point minpoint;
     minMaxLoc(match, NULL, NULL, &minpoint);
-    int xshift = patches.at(i).x - areas.at(i).x;
-    int yshift = patches.at(i).y - areas.at(i).y;
+    int xshift = patches.at(i).x - patches.at(i).searchArea.x;
+    int yshift = patches.at(i).y - patches.at(i).searchArea.y;
     minpoint -= Point(xshift, yshift);
     shifts.at<float>(i, 0) = minpoint.x;
     shifts.at<float>(i, 1) = minpoint.y;
@@ -243,7 +227,6 @@ Mat3f lucky(registrationParams params,
             Rect crop,
             std::vector<Point> globalShifts,
             std::vector<imagePatch> patches,
-            std::vector<Rect> areas,
             rbfWarper rbf,
             bool showProgress) {
   Mat3f finalsum(Mat3f::zeros(refimg.size()));
@@ -261,7 +244,7 @@ Mat3f lucky(registrationParams params,
         imgcolor = imgcolor(crop + globalShifts.at(ifile));
       Mat1f img;
       cvtColor(imgcolor, img, CV_BGR2GRAY);
-      Mat1f shifts(findShifts(img, patches, areas));
+      Mat1f shifts(findShifts(img, patches));
       Mat imremap(rbf.warp(imgcolor, shifts));
       localsum += imremap;
 

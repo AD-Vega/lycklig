@@ -65,11 +65,10 @@ int main(int argc, char *argv[]) {
   auto patches = selectPointsHex(refimg, params.boxsize, params.maxmove);
   patches = filterPatchesByQuality(patches, params.val_threshold, params.surf_threshold);
   fprintf(stderr, "%ld valid patches\n", patches.size());
-  auto areas = createSearchAreas(patches, refimg.size(), params.maxmove);
   rbfWarper rbf(patches, refimg.size(), xydiff/2);
 
   fprintf(stderr, "Lucky imaging: registration & warping\n");
-  Mat finalsum = lucky(params, refimg, crop, globalShifts, patches, areas, rbf, true);
+  Mat finalsum = lucky(params, refimg, crop, globalShifts, patches, rbf, true);
 
   imwrite(params.output_file, normalizeTo16Bits(finalsum));
   return 0;

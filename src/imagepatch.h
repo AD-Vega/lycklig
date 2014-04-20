@@ -23,14 +23,16 @@
 
 class imagePatch {
 public:
-  inline imagePatch(int xpos, int ypos, cv::Mat img) :
-    x(xpos), y(ypos), image(img), sqsum(sum(img.mul(img))[0]) {}
+  inline imagePatch(int xpos, int ypos, cv::Mat img, cv::Rect search) :
+    x(xpos), y(ypos), image(img), searchArea(search),
+    sqsum(sum(img.mul(img))[0]) {}
   inline int xcenter() const { return x + image.cols/2; }
   inline int ycenter() const { return y + image.rows/2; }
 
   unsigned int x;
   unsigned int y;
   cv::Mat image;
+  cv::Rect searchArea;
   double sqsum;
 };
 
