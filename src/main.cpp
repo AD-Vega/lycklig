@@ -62,7 +62,8 @@ int main(int argc, char *argv[]) {
 
   fprintf(stderr, "Lucky imaging: creating registration patches\n");
   const unsigned int xydiff = params.boxsize/2;
-  auto patches = selectPointsHex(refimg, params.boxsize, xydiff, params.val_threshold, params.surf_threshold);
+  auto patches = selectPointsHex(refimg, params.boxsize, params.maxmove);
+  patches = filterPatchesByQuality(patches, params.val_threshold, params.surf_threshold);
   fprintf(stderr, "%ld valid patches\n", patches.size());
   auto areas = createSearchAreas(patches, refimg.size(), params.maxmove);
   rbfWarper rbf(patches, refimg.size(), xydiff/2);

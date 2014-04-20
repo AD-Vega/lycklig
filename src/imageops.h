@@ -66,9 +66,11 @@ cv::Mat meanimg(const std::vector<std::string>& files,
 
 std::vector<imagePatch> selectPointsHex(const cv::Mat img,
                                         const unsigned int boxsize,
-                                        const unsigned int xydiff,
-                                        const double val_threshold,
-                                        const double surf_threshold);
+                                        const unsigned int maxmove);
+
+std::vector<imagePatch> filterPatchesByQuality(const std::vector<imagePatch> patches,
+                                               const double val_threshold,
+                                               const double surf_threshold);
 
 cv::Mat drawPoints(const cv::Mat& img, const std::vector<imagePatch>& patches);
 

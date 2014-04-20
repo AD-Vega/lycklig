@@ -83,12 +83,11 @@ Mat meanimg(const std::vector<std::string>& files,
 
 std::vector<imagePatch> selectPointsHex(const Mat img,
                                         const unsigned int boxsize,
-                                        const unsigned int xydiff,
-                                        const double val_threshold,
-                                        const double surf_threshold) {
+                                        const unsigned int maxmove) {
   std::vector<imagePatch> patches;
+  const int xydiff = boxsize/2;
   int yspacing = ceil(xydiff*sqrt(0.75));
-  int xshift = xydiff/2;
+  const int xshift = xydiff/2;
   int period = 0;
   for (int y = 0; y <= img.rows - (signed)boxsize; y += yspacing, period++) {
     for (int xbase = 0; xbase <= img.cols - (signed)boxsize; xbase += xydiff) {
@@ -96,18 +95,28 @@ std::vector<imagePatch> selectPointsHex(const Mat img,
       if (x > img.rows - (signed)boxsize)
         break;
       Mat roi(img, Rect(x, y, boxsize, boxsize));
-      double maxval;
-      minMaxLoc(roi, NULL, &maxval);
-      int overThreshold = countNonZero(roi > val_threshold * maxval);
-      if (overThreshold > surf_threshold * boxsize * boxsize) {
-        Mat1f roif;
-        roi.convertTo(roif, CV_32F);
-        imagePatch p(x, y, roif);
-        patches.push_back(p);
-      }
+      Mat1f roif;
+      roi.convertTo(roif, CV_32F);
+      imagePatch p(x, y, roif);
+      patches.push_back(p);
     }
   }
   return patches;
+}
+
+
+std::vector<imagePatch> filterPatchesByQuality(const std::vector<imagePatch> patches,
+                                               const double val_threshold,
+                                               const double surf_threshold) {
+  std::vector<imagePatch> newPatches;
+  for (auto& patch : patches) {
+    double maxval;
+    minMaxLoc(patch.image, NULL, &maxval);
+    int overThreshold = countNonZero(patch.image > val_threshold * maxval);
+    if (overThreshold > surf_threshold * patch.image.size().area())
+      newPatches.push_back(patch);
+  }
+  return newPatches;
 }
 
 
