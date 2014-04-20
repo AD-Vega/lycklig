@@ -27,7 +27,7 @@ public:
   std::string shortID() const
     { return "0.0-1.0"; }
   bool check(const float& value) const
-    { return (value > 0.0) && (value < 1.0); }
+    { return (value >= 0.0) && (value < 1.0); }
 } pConstraint;
 
 
