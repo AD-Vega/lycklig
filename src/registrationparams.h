@@ -32,8 +32,6 @@ public:
   unsigned int prereg_maxmove = 0;
   bool only_stack = false;
   unsigned int boxsize = 60;
-  float val_threshold = 0.3;
-  float surf_threshold = 0.4;
   unsigned int maxmove = 20;
   std::string output_file;
   std::vector<std::string> files;
