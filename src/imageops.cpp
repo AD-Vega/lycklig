@@ -16,6 +16,7 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <limits>
 #include "imageops.h"
 
 using namespace cv;
@@ -117,16 +118,79 @@ std::vector<imagePatch> selectPointsHex(const Mat img,
 }
 
 
+// Patch quality estimation
+//
+// Patch quality is assessed as follows: each patch is matched against its
+// own search area on the reference image. Local curvature around the central
+// (best matching - by definition) point is then estimated by fitting a 2D
+// quadratic polynomial to a 3x3 pixel neighbourhood of the point, yielding a
+// Hessian matrix. The smaller of the two eigenvalues of this Hessian
+// represents the worst-case (smallest) change in match value that one can get
+// by moving one pixel away from the central point. If the match field contains
+// more than one point for which the match value is below this eigenvalue,
+// the patch quality is deemed insufficient and the patch is rejected.
+//
 std::vector<imagePatch> filterPatchesByQuality(const std::vector<imagePatch> patches,
-                                               const double val_threshold,
-                                               const double surf_threshold) {
+                                               const Mat& refimg) {
+  // Patches that are good enough will be returned in this vector.
   std::vector<imagePatch> newPatches;
+
+  // A matrix of x^2, x*y and y^2 that will be needed for the quadratic fit.
+  Mat fitx(9, 3, CV_32F);
+  int row = 0;
+  for (int x = -1; x <= 1; x++) {
+    for (int y = -1; y <= 1; y++) {
+      fitx.at<float>(row, 0) = x*x;
+      fitx.at<float>(row, 1) = x*y;
+      fitx.at<float>(row, 2) = y*y;
+      row++;
+    }
+  }
+
+  // Local neighbourhood of the central point.
+  Mat aroundMinimum(3, 3, CV_32F);
+  // Same, but shaped as a column vector (for fitting).
+  Mat amAsVector = aroundMinimum.reshape(0, 9);
+  // Fit coefficients.
+  Mat coeffs;
+
   for (auto& patch : patches) {
-    double maxval;
-    minMaxLoc(patch.image, NULL, &maxval);
-    int overThreshold = countNonZero(patch.image > val_threshold * maxval);
-    if (overThreshold > surf_threshold * patch.image.size().area())
-      newPatches.push_back(patch);
+    // perform the matching
+    Mat1f roi(refimg, patch.searchArea);
+    Mat1f mask = Mat::ones(patch.image.rows, patch.image.cols, CV_32F);
+    Mat1f areasq;
+    matchTemplate(roi.mul(roi), mask, areasq, CV_TM_CCORR);
+    Mat1f cor;
+    matchTemplate(roi, patch.image, cor, CV_TM_CCORR);
+    Mat1f match = areasq - (cor.mul(cor) / patch.sqsum);
+
+    // Find the local neighbourhood of the central point and fit a 2D
+    // quadratic polynomial to it.
+    Point matchCenter(patch.x - patch.searchArea.x,
+                      patch.y - patch.searchArea.y);
+    Rect matchLocal3x3(matchCenter - Point(1, 1), Size(3, 3));
+    match(matchLocal3x3).copyTo(aroundMinimum);
+    solve(fitx, amAsVector, coeffs, DECOMP_SVD);
+
+    // Calculate the smaller of the eigenvalues. Since this is only a 2x2
+    // Hessian, the analytical solution is used.
+    const float kxx = coeffs.at<float>(0);
+    const float kxy = 0.5*coeffs.at<float>(1);
+    const float kyy = coeffs.at<float>(2);
+    const float lowEig = 0.5*(kxx + kyy - sqrt(pow(kxx - kyy, 2) + 4*pow(kxy, 2)));
+
+    // No point in dealing with eigenvalues smaller than epsilon. We also
+    // reject negative eigenvalues with this test.
+    if (lowEig >= std::numeric_limits<float>::epsilon()) {
+      // Tunable parameter for possible future use.
+      const float eigMult = 1.0;
+      int overThreshold = countNonZero(match < lowEig*eigMult);
+      // Note that in some pathological cases, overThreshold can actually end
+      // up being zero. We don't want to mess with those anyway, so we only
+      // accept the patch if overThreshold is exactly one.
+      if (overThreshold == 1)
+        newPatches.push_back(patch);
+    }
   }
   return newPatches;
 }

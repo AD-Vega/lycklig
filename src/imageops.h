@@ -69,8 +69,7 @@ std::vector<imagePatch> selectPointsHex(const cv::Mat img,
                                         const unsigned int maxmove);
 
 std::vector<imagePatch> filterPatchesByQuality(const std::vector<imagePatch> patches,
-                                               const double val_threshold,
-                                               const double surf_threshold);
+                                               const cv::Mat& refimg);
 
 cv::Mat drawPoints(const cv::Mat& img, const std::vector<imagePatch>& patches);
 
