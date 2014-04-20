@@ -124,9 +124,9 @@ std::vector<imagePatch> filterPatchesByQuality(const std::vector<imagePatch> pat
 
 Mat drawPoints(const Mat& img, const std::vector<imagePatch>& patches) {
   Mat out = img.clone();
-  for (auto i = patches.begin(); i != patches.end(); i++) {
-     circle(out, Point(i->xcenter(), i->ycenter()), 2, Scalar(0, 0, 255));
-     rectangle(out, Rect(i->x, i->y, i->image.cols, i->image.rows), Scalar(0, 255, 0));
+  for (auto& patch : patches) {
+     circle(out, Point(patch.xcenter(), patch.ycenter()), 2, Scalar(0, 0, 255));
+     rectangle(out, Rect(patch.x, patch.y, patch.image.cols, patch.image.rows), Scalar(0, 255, 0));
   }
   return out;
 }
@@ -213,9 +213,9 @@ std::vector<Point> getGlobalShifts(const std::vector<std::string>& files,
 Rect optimalCrop(std::vector<Point> shifts, Size size) {
   Rect crop(shifts.at(0), size);
   Rect origin(shifts.at(0), size);
-  for (size_t i = 0; i < shifts.size(); i++) {
-        crop &= Rect(shifts.at(i), size);
-        origin |= Rect(shifts.at(i), size);
+  for (auto& shift : shifts) {
+        crop &= Rect(shift, size);
+        origin |= Rect(shift, size);
   }
   crop -= crop.tl() + origin.tl();
   return crop;
