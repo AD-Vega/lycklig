@@ -86,20 +86,30 @@ std::vector<imagePatch> selectPointsHex(const Mat img,
                                         const unsigned int maxmove) {
   std::vector<imagePatch> patches;
   Rect imgrect(Point(0, 0), img.size());
+
+  // We set maximum displacement to maxmove+1: the 1px border is used as a
+  // "safety zone" (detecting maximum displacement in at least one direction
+  // usually indicates that the local minimum is probably outside the
+  // search area) and also to allow for the estimation of the local
+  // curvature of fit around the minimum point.
+  const int maxmb = maxmove + 1;
+
+  // Points are arranged in a hexagonal grid. Each point is chosen sufficiently
+  // far from the borders so that the search area (maxb in both directions)
+  // is fully contained in the reference image.
   const int xydiff = boxsize/2;
   int yspacing = ceil(xydiff*sqrt(0.75));
   const int xshift = xydiff/2;
   int period = 0;
-  for (int y = 0; y <= img.rows - (signed)boxsize; y += yspacing, period++) {
-    for (int xbase = 0; xbase <= img.cols - (signed)boxsize; xbase += xydiff) {
-      int x = (period % 2 ? xbase + xshift : xbase);
-      if (x > img.rows - (signed)boxsize)
-        break;
+  for (int y = maxmb; y <= img.rows - (signed)boxsize - maxmb; y += yspacing, period++) {
+    for (int x = maxmb + (period % 2 ? xshift : 0);
+         x <= img.cols - (signed)boxsize - maxmb;
+         x += xydiff) {
       Mat roi(img, Rect(x, y, boxsize, boxsize));
       Mat1f roif;
       roi.convertTo(roif, CV_32F);
-      Rect fullSearchArea(Point(x-maxmove, y-maxmove), Point(x+boxsize+maxmove, y+boxsize+maxmove));
-      imagePatch p(x, y, roif, fullSearchArea & imgrect);
+      Rect searchArea(Point(x-maxmb, y-maxmb), Point(x+boxsize+maxmb, y+boxsize+maxmb));
+      imagePatch p(x, y, roif, searchArea);
       patches.push_back(p);
     }
   }
@@ -146,9 +156,17 @@ Mat1f findShifts(const Mat& img,
     Mat1f match = areasq - (cor.mul(cor) / patches.at(i).sqsum);
     Point minpoint;
     minMaxLoc(match, NULL, NULL, &minpoint);
-    int xshift = patches.at(i).x - patches.at(i).searchArea.x;
-    int yshift = patches.at(i).y - patches.at(i).searchArea.y;
-    minpoint -= Point(xshift, yshift);
+    if (minpoint.x == 0 || minpoint.y == 0 ||
+        minpoint.x == match.cols - 1 || minpoint.y == match.rows - 1) {
+      // A match was located in the outer 1px buffer zone. This is shady
+      // business. Pretend that we did not see anything.
+      minpoint = Point(0, 0);
+    }
+    else {
+      int xshift = patches.at(i).x - patches.at(i).searchArea.x;
+      int yshift = patches.at(i).y - patches.at(i).searchArea.y;
+      minpoint -= Point(xshift, yshift);
+    }
     shifts.at<float>(i, 0) = minpoint.x;
     shifts.at<float>(i, 1) = minpoint.y;
   }
