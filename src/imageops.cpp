@@ -18,6 +18,7 @@
 
 #include <limits>
 #include "imageops.h"
+#include "globalregistrator.h"
 
 using namespace cv;
 
@@ -38,18 +39,12 @@ Mat grayReader::read(string file) {
 }
 
 Mat meanimg(const std::vector<std::string>& files,
-            Rect crop,
-            vector<Point> shifts,
+            const globalRegistration& globalReg,
             bool showProgress) {
   Mat sample = magickImread(files.at(0));
-  bool doCrop;
-  if (crop.size() == Size(0, 0)) {
-    doCrop = false;
-    crop = Rect(Point(0, 0), sample.size());
-  }
-  else {
-    doCrop = true;
-  }
+  Rect crop(Point(0, 0), sample.size());
+  if (globalReg.valid)
+    crop = globalReg.crop;
   Mat imgmean(Mat::zeros(crop.size(), CV_MAKETYPE(CV_32F, sample.channels())));
   int progress = 0;
   if (showProgress)
@@ -62,8 +57,8 @@ Mat meanimg(const std::vector<std::string>& files,
     for (int i = 0; i < (signed)files.size(); i++) {
       Mat img = magickImread(files.at(i));
 
-      if (doCrop)
-        accumulate(img(crop + shifts.at(i)), localsum);
+      if (globalReg.valid)
+        accumulate(img(crop + globalReg.shifts.at(i)), localsum);
       else
         accumulate(img, localsum);
 
@@ -240,8 +235,7 @@ Mat1f findShifts(const Mat& img,
 
 Mat3f lucky(registrationParams params,
             Mat refimg,
-            Rect crop,
-            std::vector<Point> globalShifts,
+            const globalRegistration& globalReg,
             std::vector<imagePatch> patches,
             rbfWarper rbf,
             bool showProgress) {
@@ -257,7 +251,7 @@ Mat3f lucky(registrationParams params,
       Mat imgcolor;
       magickImread(params.files.at(ifile).c_str()).convertTo(imgcolor, CV_32F);
       if (params.prereg)
-        imgcolor = imgcolor(crop + globalShifts.at(ifile));
+        imgcolor = imgcolor(globalReg.crop + globalReg.shifts.at(ifile));
       Mat1f img;
       cvtColor(imgcolor, img, CV_BGR2GRAY);
       Mat1f shifts(findShifts(img, patches));

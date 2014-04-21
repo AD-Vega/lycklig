@@ -20,6 +20,17 @@
 
 using namespace cv;
 
+void globalRegistration::calculateOptimalCrop(const Size& size) {
+  crop = Rect(shifts.at(0), size);
+  Rect origin(shifts.at(0), size);
+  for (auto& shift : shifts) {
+        crop &= Rect(shift, size);
+        origin |= Rect(shift, size);
+  }
+  crop -= crop.tl() + origin.tl();
+}
+
+
 globalRegistrator::globalRegistrator(const Mat& reference, const int maxmove) {
   refImgWithBorder = Mat::zeros(reference.rows + 2*maxmove, reference.cols + 2*maxmove, CV_32F);
   Rect imageRect = Rect(maxmove, maxmove, reference.cols, reference.rows);
@@ -43,10 +54,11 @@ Point globalRegistrator::findShift(const Mat& img)
 }
 
 
-std::vector<Point> getGlobalShifts(const Mat& refimg,
-                                   const registrationParams& params,
-                                   bool showProgress) {
-  std::vector<Point> shifts(params.files.size());
+globalRegistration globalRegistrator::getGlobalShifts(const Mat& refimg,
+                                                      const registrationParams& params,
+                                                      bool showProgress) {
+  globalRegistration result;
+  result.shifts.resize(params.files.size());
   int progress = 0;
   if (showProgress)
     fprintf(stderr, "0/%ld", params.files.size());
@@ -59,7 +71,7 @@ std::vector<Point> getGlobalShifts(const Mat& refimg,
       Mat img(reader.read(params.files.at(ifile)));
       Point shift = globalReg.findShift(img);
       #pragma omp critical
-      shifts.at(ifile) = shift;
+      result.shifts.at(ifile) = shift;
 
       if (showProgress) {
         #pragma omp critical
@@ -70,16 +82,7 @@ std::vector<Point> getGlobalShifts(const Mat& refimg,
   if (showProgress)
     fprintf(stderr, "\n");
 
-  return shifts;
-}
-
-Rect optimalCrop(std::vector<Point> shifts, Size size) {
-  Rect crop(shifts.at(0), size);
-  Rect origin(shifts.at(0), size);
-  for (auto& shift : shifts) {
-        crop &= Rect(shift, size);
-        origin |= Rect(shift, size);
-  }
-  crop -= crop.tl() + origin.tl();
-  return crop;
+  result.calculateOptimalCrop(refimg.size());
+  result.valid = true;
+  return result;
 }

@@ -22,12 +22,36 @@
 #include "imageops.h"
 #include "registrationparams.h"
 
+class globalRegistrator;
+
+class globalRegistration {
+public:
+  bool valid = false;
+  std::vector<cv::Point> shifts;
+  cv::Rect crop;
+
+  void calculateOptimalCrop(const cv::Size& size);
+};
+
+
 class globalRegistrator {
 public:
   globalRegistrator(const cv::Mat& reference, const int maxmove);
 
-  // NOT THREAD SAFE!
+  // Parallelized static method that registers a set of images.
+  static globalRegistration getGlobalShifts(const cv::Mat& refimg,
+                                            const registrationParams& params,
+                                            bool showProgress);
+
+private:
+  // Not thread safe.
+  // Each thread needs to have its own instance of globalRegistrator in order
+  // to call this method.
   cv::Point findShift(const cv::Mat& img);
+
+friend globalRegistration getGlobalShifts(const cv::Mat& refimg,
+                                          const registrationParams& params,
+                                          bool showProgress);
 
 private:
   cv::Mat1f refImgWithBorder;
@@ -39,11 +63,5 @@ private:
   cv::Mat1f match;
   cv::Point originShift;
 };
-
-std::vector<cv::Point> getGlobalShifts(const cv::Mat& refimg,
-                                       const registrationParams& params,
-                                       bool showProgress);
-
-cv::Rect optimalCrop(std::vector<cv::Point> shifts, cv::Size size);
 
 #endif // GLOBALREGISTRATOR_H

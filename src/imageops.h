@@ -28,6 +28,7 @@
 #include "registrationparams.h"
 #include "rbfwarper.h"
 
+class globalRegistration;
 
 class grayReader {
 public:
@@ -42,9 +43,8 @@ private:
 cv::Mat magickImread(const std::string& filename);
 
 cv::Mat meanimg(const std::vector<std::string>& files,
-            cv::Rect crop,
-            std::vector<cv::Point> shifts,
-            bool showProgress = false);
+                const globalRegistration& globalReg,
+                bool showProgress = false);
 
 std::vector<imagePatch> selectPointsHex(const cv::Mat img,
                                         const registrationParams& params);
@@ -60,8 +60,7 @@ cv::Mat1f findShifts(const cv::Mat& img,
 
 cv::Mat3f lucky(registrationParams params,
                 cv::Mat refimg,
-                cv::Rect crop,
-                std::vector<cv::Point> globalShifts,
+                const globalRegistration& globalReg,
                 std::vector<imagePatch> patches,
                 rbfWarper rbf,
                 bool showProgress = false);

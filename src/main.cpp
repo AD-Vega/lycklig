@@ -38,21 +38,18 @@ int main(int argc, char *argv[]) {
 
   fprintf(stderr, "%ld input files listed\n", params.files.size());
 
-  vector<Point> globalShifts;
-  Rect crop(Point(0, 0), Size(0, 0));
-
+  globalRegistration globalRegResult;
   if (params.prereg) {
     Mat globalRefimg(grayReader().read(params.prereg_img));
     if (params.prereg_maxmove == 0) {
       params.prereg_maxmove = std::min(globalRefimg.rows, globalRefimg.cols)/2;
     }
     fprintf(stderr, "Pre-registering\n");
-    globalShifts = getGlobalShifts(globalRefimg, params, true);
-    crop = optimalCrop(globalShifts, globalRefimg.size());
+    globalRegResult = globalRegistrator::getGlobalShifts(globalRefimg, params, true);
   }
 
   fprintf(stderr, "Creating a stacked reference image\n");
-  Mat rawRef = meanimg(params.files, crop, globalShifts, true);
+  Mat rawRef = meanimg(params.files, globalRegResult, true);
   if (params.only_stack) {
     imwrite(params.output_file, normalizeTo16Bits(rawRef));
     return 0;
@@ -69,7 +66,7 @@ int main(int argc, char *argv[]) {
   rbfWarper rbf(patches, refimg.size(), xydiff/2);
 
   fprintf(stderr, "Lucky imaging: registration & warping\n");
-  Mat finalsum = lucky(params, refimg, crop, globalShifts, patches, rbf, true);
+  Mat finalsum = lucky(params, refimg, globalRegResult, patches, rbf, true);
 
   imwrite(params.output_file, normalizeTo16Bits(finalsum));
   return 0;
