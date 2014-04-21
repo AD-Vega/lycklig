@@ -39,24 +39,6 @@ private:
   cv::Mat1f imggray;
 };
 
-class globalRegistrator {
-public:
-  globalRegistrator(const cv::Mat& reference, const int maxmove);
-
-  // NOT THREAD SAFE!
-  cv::Point findShift(const cv::Mat& img);
-
-private:
-  cv::Mat1f refImgWithBorder;
-  cv::Mat1f refImageArea;
-  cv::Mat1f searchMask;
-  cv::Mat1f areasq;
-  cv::Mat1f imgsq;
-  cv::Mat1f cor;
-  cv::Mat1f match;
-  cv::Point originShift;
-};
-
 cv::Mat magickImread(const std::string& filename);
 
 cv::Mat meanimg(const std::vector<std::string>& files,
@@ -75,12 +57,6 @@ cv::Mat drawPoints(const cv::Mat& img, const std::vector<imagePatch>& patches);
 cv::Mat1f findShifts(const cv::Mat& img,
                      const std::vector<imagePatch>& patches,
                      const std::vector<cv::Rect>& areas);
-
-std::vector<cv::Point> getGlobalShifts(const cv::Mat& refimg,
-                                       const registrationParams& params,
-                                       bool showProgress);
-
-cv::Rect optimalCrop(std::vector<cv::Point> shifts, cv::Size size);
 
 cv::Mat3f lucky(registrationParams params,
                 cv::Mat refimg,

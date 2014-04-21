@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <omp.h>
 #include "imageops.h"
+#include "globalregistrator.h"
 #include "rbfwarper.h"
 #include "registrationparams.h"
 
