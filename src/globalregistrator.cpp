@@ -61,7 +61,7 @@ globalRegistration globalRegistrator::getGlobalShifts(const Mat& refimg,
   result.shifts.resize(params.files.size());
   int progress = 0;
   if (showProgress)
-    fprintf(stderr, "0/%ld", params.files.size());
+    std::fprintf(stderr, "0/%ld", params.files.size());
   #pragma omp parallel
   {
     grayReader reader;
@@ -75,12 +75,12 @@ globalRegistration globalRegistrator::getGlobalShifts(const Mat& refimg,
 
       if (showProgress) {
         #pragma omp critical
-        fprintf(stderr, "\r\033[K%d/%ld", ++progress, params.files.size());
+        std::fprintf(stderr, "\r\033[K%d/%ld", ++progress, params.files.size());
       }
     }
   }
   if (showProgress)
-    fprintf(stderr, "\n");
+    std::fprintf(stderr, "\n");
 
   result.calculateOptimalCrop(refimg.size());
   result.valid = true;

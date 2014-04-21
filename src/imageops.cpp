@@ -48,7 +48,7 @@ Mat meanimg(const std::vector<std::string>& files,
   Mat imgmean(Mat::zeros(crop.size(), CV_MAKETYPE(CV_32F, sample.channels())));
   int progress = 0;
   if (showProgress)
-    fprintf(stderr, "0/%ld", files.size());
+    std::fprintf(stderr, "0/%ld", files.size());
   #pragma omp parallel
   {
     Mat localsum(imgmean.clone());
@@ -64,14 +64,14 @@ Mat meanimg(const std::vector<std::string>& files,
 
       if (showProgress) {
         #pragma omp critical
-        fprintf(stderr, "\r\033[K%d/%ld", ++progress, files.size());
+        std::fprintf(stderr, "\r\033[K%d/%ld", ++progress, files.size());
       }
     }
     #pragma omp critical
     accumulate(localsum, imgmean);
   }
   if (showProgress)
-    fprintf(stderr, "\n");
+    std::fprintf(stderr, "\n");
   imgmean /= files.size();
   return imgmean;
 }
@@ -242,7 +242,7 @@ Mat3f lucky(const registrationParams& params,
   Mat3f finalsum(Mat3f::zeros(refimg.size()));
   int progress = 0;
   if (showProgress)
-    fprintf(stderr, "0/%ld", params.files.size());
+    std::fprintf(stderr, "0/%ld", params.files.size());
   #pragma omp parallel
   {
     Mat3f localsum(Mat3f::zeros(refimg.size()));
@@ -260,14 +260,14 @@ Mat3f lucky(const registrationParams& params,
 
       if (showProgress) {
         #pragma omp critical
-        fprintf(stderr, "\r\033[K%d/%ld", ++progress, params.files.size());
+        std::fprintf(stderr, "\r\033[K%d/%ld", ++progress, params.files.size());
       }
     }
     #pragma omp critical
     finalsum += localsum;
   }
   if (showProgress)
-    fprintf(stderr, "\n");
+    std::fprintf(stderr, "\n");
 
   return finalsum;
 }

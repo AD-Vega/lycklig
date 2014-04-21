@@ -36,7 +36,7 @@ int main(const int argc, const char *argv[]) {
 
   Magick::InitializeMagick(NULL);
 
-  fprintf(stderr, "%ld input files listed\n", params.files.size());
+  std::cerr << params.files.size() << " input files listed\n";
 
   globalRegistration globalRegResult;
   if (params.prereg) {
@@ -44,11 +44,11 @@ int main(const int argc, const char *argv[]) {
     if (params.prereg_maxmove == 0) {
       params.prereg_maxmove = std::min(globalRefimg.rows, globalRefimg.cols)/2;
     }
-    fprintf(stderr, "Pre-registering\n");
+    std::cerr << "Pre-registering\n";
     globalRegResult = globalRegistrator::getGlobalShifts(globalRefimg, params, true);
   }
 
-  fprintf(stderr, "Creating a stacked reference image\n");
+  std::cerr << "Creating a stacked reference image\n";
   Mat rawRef = meanimg(params.files, globalRegResult, true);
   if (params.only_stack) {
     imwrite(params.output_file, normalizeTo16Bits(rawRef));
@@ -58,14 +58,14 @@ int main(const int argc, const char *argv[]) {
   rawRef.convertTo(refimg, CV_32F);
   cvtColor(refimg, refimg, CV_BGR2GRAY);
 
-  fprintf(stderr, "Lucky imaging: creating registration patches\n");
+  std::cerr << "Lucky imaging: creating registration patches\n";
   const unsigned int xydiff = params.boxsize/2;
   auto patches = selectPointsHex(refimg, params);
   patches = filterPatchesByQuality(patches, refimg);
-  fprintf(stderr, "%ld valid patches\n", patches.size());
+  std::cerr << patches.size() << " valid patches\n";
   rbfWarper rbf(patches, refimg.size(), xydiff/2);
 
-  fprintf(stderr, "Lucky imaging: registration & warping\n");
+  std::cerr << "Lucky imaging: registration & warping\n";
   Mat finalsum = lucky(params, refimg, globalRegResult, patches, rbf, true);
 
   imwrite(params.output_file, normalizeTo16Bits(finalsum));
