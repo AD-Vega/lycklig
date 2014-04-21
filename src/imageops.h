@@ -65,8 +65,7 @@ cv::Mat meanimg(const std::vector<std::string>& files,
             bool showProgress = false);
 
 std::vector<imagePatch> selectPointsHex(const cv::Mat img,
-                                        const unsigned int boxsize,
-                                        const unsigned int maxmove);
+                                        const registrationParams& params);
 
 std::vector<imagePatch> filterPatchesByQuality(const std::vector<imagePatch> patches,
                                                const cv::Mat& refimg);
@@ -77,10 +76,9 @@ cv::Mat1f findShifts(const cv::Mat& img,
                      const std::vector<imagePatch>& patches,
                      const std::vector<cv::Rect>& areas);
 
-std::vector<cv::Point> getGlobalShifts(const std::vector<std::string>& files,
-                                       const cv::Mat& refimg,
-                                       unsigned int maxmove,
-                                       bool showProgress = false);
+std::vector<cv::Point> getGlobalShifts(const cv::Mat& refimg,
+                                       const registrationParams& params,
+                                       bool showProgress);
 
 cv::Rect optimalCrop(std::vector<cv::Point> shifts, cv::Size size);
 

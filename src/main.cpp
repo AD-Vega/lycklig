@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
       params.prereg_maxmove = std::min(globalRefimg.rows, globalRefimg.cols)/2;
     }
     fprintf(stderr, "Pre-registering\n");
-    globalShifts = getGlobalShifts(params.files, globalRefimg, params.prereg_maxmove, true);
+    globalShifts = getGlobalShifts(globalRefimg, params, true);
     crop = optimalCrop(globalShifts, globalRefimg.size());
   }
 
@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
 
   fprintf(stderr, "Lucky imaging: creating registration patches\n");
   const unsigned int xydiff = params.boxsize/2;
-  auto patches = selectPointsHex(refimg, params.boxsize, params.maxmove);
+  auto patches = selectPointsHex(refimg, params);
   patches = filterPatchesByQuality(patches, refimg);
   fprintf(stderr, "%ld valid patches\n", patches.size());
   rbfWarper rbf(patches, refimg.size(), xydiff/2);

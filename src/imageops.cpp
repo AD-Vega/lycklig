@@ -83,17 +83,17 @@ Mat meanimg(const std::vector<std::string>& files,
 
 
 std::vector<imagePatch> selectPointsHex(const Mat img,
-                                        const unsigned int boxsize,
-                                        const unsigned int maxmove) {
+                                        const registrationParams& params) {
   std::vector<imagePatch> patches;
   Rect imgrect(Point(0, 0), img.size());
+  const int boxsize = params.boxsize;
 
   // We set maximum displacement to maxmove+1: the 1px border is used as a
   // "safety zone" (detecting maximum displacement in at least one direction
   // usually indicates that the local minimum is probably outside the
   // search area) and also to allow for the estimation of the local
   // curvature of fit around the minimum point.
-  const int maxmb = maxmove + 1;
+  const int maxmb = params.maxmove + 1;
 
   // Points are arranged in a hexagonal grid. Each point is chosen sufficiently
   // far from the borders so that the search area (maxb in both directions)
@@ -102,9 +102,9 @@ std::vector<imagePatch> selectPointsHex(const Mat img,
   int yspacing = ceil(xydiff*sqrt(0.75));
   const int xshift = xydiff/2;
   int period = 0;
-  for (int y = maxmb; y <= img.rows - (signed)boxsize - maxmb; y += yspacing, period++) {
+  for (int y = maxmb; y <= img.rows - boxsize - maxmb; y += yspacing, period++) {
     for (int x = maxmb + (period % 2 ? xshift : 0);
-         x <= img.cols - (signed)boxsize - maxmb;
+         x <= img.cols - boxsize - maxmb;
          x += xydiff) {
       Mat roi(img, Rect(x, y, boxsize, boxsize));
       Mat1f roif;
@@ -261,28 +261,27 @@ Point globalRegistrator::findShift(const Mat& img)
 }
 
 
-std::vector<Point> getGlobalShifts(const std::vector<std::string>& files,
-                                   const Mat& refimg,
-                                   unsigned int maxmove,
+std::vector<Point> getGlobalShifts(const Mat& refimg,
+                                   const registrationParams& params,
                                    bool showProgress) {
-  std::vector<Point> shifts(files.size());
+  std::vector<Point> shifts(params.files.size());
   int progress = 0;
   if (showProgress)
-    fprintf(stderr, "0/%ld", files.size());
+    fprintf(stderr, "0/%ld", params.files.size());
   #pragma omp parallel
   {
     grayReader reader;
-    globalRegistrator globalReg(refimg, maxmove);
+    globalRegistrator globalReg(refimg, params.prereg_maxmove);
     #pragma omp for schedule(dynamic)
-    for (int ifile = 0; ifile < (signed)files.size(); ifile++) {
-      Mat img(reader.read(files.at(ifile)));
+    for (int ifile = 0; ifile < (signed)params.files.size(); ifile++) {
+      Mat img(reader.read(params.files.at(ifile)));
       Point shift = globalReg.findShift(img);
       #pragma omp critical
       shifts.at(ifile) = shift;
 
       if (showProgress) {
         #pragma omp critical
-        fprintf(stderr, "\r\033[K%d/%ld", ++progress, files.size());
+        fprintf(stderr, "\r\033[K%d/%ld", ++progress, params.files.size());
       }
     }
   }
