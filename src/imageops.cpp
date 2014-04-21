@@ -32,7 +32,7 @@ Mat magickImread(const std::string& filename)
   return output;
 }
 
-Mat grayReader::read(string file) {
+Mat grayReader::read(const string& file) {
   magickImread(file.c_str()).convertTo(imgcolor, CV_32F);
   cvtColor(imgcolor, imggray, CV_BGR2GRAY);
   return imggray;
@@ -40,7 +40,7 @@ Mat grayReader::read(string file) {
 
 Mat meanimg(const std::vector<std::string>& files,
             const globalRegistration& globalReg,
-            bool showProgress) {
+            const bool showProgress) {
   Mat sample = magickImread(files.at(0));
   Rect crop(Point(0, 0), sample.size());
   if (globalReg.valid)
@@ -77,7 +77,7 @@ Mat meanimg(const std::vector<std::string>& files,
 }
 
 
-std::vector<imagePatch> selectPointsHex(const Mat img,
+std::vector<imagePatch> selectPointsHex(const Mat& img,
                                         const registrationParams& params) {
   std::vector<imagePatch> patches;
   Rect imgrect(Point(0, 0), img.size());
@@ -125,7 +125,7 @@ std::vector<imagePatch> selectPointsHex(const Mat img,
 // more than one point for which the match value is below this eigenvalue,
 // the patch quality is deemed insufficient and the patch is rejected.
 //
-std::vector<imagePatch> filterPatchesByQuality(const std::vector<imagePatch> patches,
+std::vector<imagePatch> filterPatchesByQuality(const std::vector<imagePatch>& patches,
                                                const Mat& refimg) {
   // Patches that are good enough will be returned in this vector.
   std::vector<imagePatch> newPatches;
@@ -233,12 +233,12 @@ Mat1f findShifts(const Mat& img,
 }
 
 
-Mat3f lucky(registrationParams params,
-            Mat refimg,
+Mat3f lucky(const registrationParams& params,
+            const Mat& refimg,
             const globalRegistration& globalReg,
-            std::vector<imagePatch> patches,
-            rbfWarper rbf,
-            bool showProgress) {
+            const std::vector<imagePatch>& patches,
+            const rbfWarper& rbf,
+            const bool showProgress) {
   Mat3f finalsum(Mat3f::zeros(refimg.size()));
   int progress = 0;
   if (showProgress)

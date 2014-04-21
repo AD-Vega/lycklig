@@ -26,7 +26,7 @@ std::string defval(num_t d)
 }
 
 
-bool registrationParams::parse(int argc, char* argv[])
+bool registrationParams::parse(const int argc, const char* argv[])
 {
   try
   {

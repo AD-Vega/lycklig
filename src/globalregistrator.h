@@ -51,7 +51,7 @@ private:
 
 friend globalRegistration getGlobalShifts(const cv::Mat& refimg,
                                           const registrationParams& params,
-                                          bool showProgress);
+                                          const bool showProgress);
 
 private:
   cv::Mat1f refImgWithBorder;

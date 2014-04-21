@@ -33,7 +33,7 @@ class globalRegistration;
 class grayReader {
 public:
   // NOT THREAD SAFE!
-  cv::Mat read(std::string file);
+  cv::Mat read(const std::string& file);
 
 private:
   cv::Mat imgcolor;
@@ -44,12 +44,12 @@ cv::Mat magickImread(const std::string& filename);
 
 cv::Mat meanimg(const std::vector<std::string>& files,
                 const globalRegistration& globalReg,
-                bool showProgress = false);
+                const bool showProgress = false);
 
-std::vector<imagePatch> selectPointsHex(const cv::Mat img,
+std::vector<imagePatch> selectPointsHex(const cv::Mat& img,
                                         const registrationParams& params);
 
-std::vector<imagePatch> filterPatchesByQuality(const std::vector<imagePatch> patches,
+std::vector<imagePatch> filterPatchesByQuality(const std::vector<imagePatch>& patches,
                                                const cv::Mat& refimg);
 
 cv::Mat drawPoints(const cv::Mat& img, const std::vector<imagePatch>& patches);
@@ -58,12 +58,12 @@ cv::Mat1f findShifts(const cv::Mat& img,
                      const std::vector<imagePatch>& patches,
                      const std::vector<cv::Rect>& areas);
 
-cv::Mat3f lucky(registrationParams params,
-                cv::Mat refimg,
+cv::Mat3f lucky(const registrationParams& params,
+                const cv::Mat& refimg,
                 const globalRegistration& globalReg,
-                std::vector<imagePatch> patches,
-                rbfWarper rbf,
-                bool showProgress = false);
+                const std::vector<imagePatch>& patches,
+                const rbfWarper& rbf,
+                const bool showProgress = false);
 
 cv::Mat3w normalizeTo16Bits(const cv::Mat& inputImg);
 

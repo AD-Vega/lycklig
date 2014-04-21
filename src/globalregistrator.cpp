@@ -56,7 +56,7 @@ Point globalRegistrator::findShift(const Mat& img)
 
 globalRegistration globalRegistrator::getGlobalShifts(const Mat& refimg,
                                                       const registrationParams& params,
-                                                      bool showProgress) {
+                                                      const bool showProgress) {
   globalRegistration result;
   result.shifts.resize(params.files.size());
   int progress = 0;

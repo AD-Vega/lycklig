@@ -73,7 +73,7 @@ void rbfWarper::prepareCoeffs(const std::vector<imagePatch>& patches) {
 }
 
 
-Mat rbfWarper::warp(const Mat& image, const Mat1f& shifts) {
+Mat rbfWarper::warp(const Mat& image, const Mat1f& shifts) const {
   Mat1f weights(coeffs * shifts);
   Mat1f xshift(xshiftbase.clone());
   Mat1f yshift(yshiftbase.clone());

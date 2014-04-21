@@ -26,7 +26,7 @@ public:
   rbfWarper(const std::vector<imagePatch>& patches,
 	    const cv::Size& imagesize,
 	    const float sigma);
-  cv::Mat warp(const cv::Mat& image, const cv::Mat1f& shifts);
+  cv::Mat warp(const cv::Mat& image, const cv::Mat1f& shifts) const;
 
 private:
   void gauss1d(float* ptr, const cv::Range& range, const float sigma);

@@ -25,7 +25,7 @@
 class registrationParams
 {
 public:
-  bool parse(int argc, char *argv[]);
+  bool parse(const int argc, const char *argv[]);
 
   bool prereg = false;
   std::string prereg_img;
