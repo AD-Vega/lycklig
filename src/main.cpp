@@ -59,14 +59,12 @@ int main(const int argc, const char *argv[]) {
   cvtColor(refimg, refimg, CV_BGR2GRAY);
 
   std::cerr << "Lucky imaging: creating registration patches\n";
-  const unsigned int xydiff = params.boxsize/2;
   auto patches = selectPointsHex(refimg, params);
   patches = filterPatchesByQuality(patches, refimg);
   std::cerr << patches.size() << " valid patches\n";
-  rbfWarper rbf(patches, refimg.size(), xydiff/2);
 
   std::cerr << "Lucky imaging: registration & warping\n";
-  Mat finalsum = lucky(params, refimg, globalRegResult, patches, rbf, true);
+  Mat finalsum = lucky(params, refimg, globalRegResult, patches, true);
 
   imwrite(params.output_file, normalizeTo16Bits(finalsum));
   return 0;

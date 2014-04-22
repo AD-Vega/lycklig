@@ -292,8 +292,8 @@ Mat3f lucky(const registrationParams& params,
             const Mat& refimg,
             const globalRegistration& globalReg,
             const std::vector<imagePatch>& patches,
-            const rbfWarper& rbf,
             const bool showProgress) {
+  rbfWarper rbf(patches, refimg.size(), params.boxsize/4);
   Mat3f finalsum(Mat3f::zeros(refimg.size()));
   int progress = 0;
   if (showProgress)
