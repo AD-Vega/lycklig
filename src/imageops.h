@@ -40,6 +40,16 @@ private:
   cv::Mat1f imggray;
 };
 
+class patchMatcher {
+public:
+  cv::Mat1f match(cv::Mat1f img, imagePatch patch);
+
+private:
+  cv::Mat1f mask;
+  cv::Mat1f areasq;
+  cv::Mat1f cor;
+};
+
 cv::Mat magickImread(const std::string& filename);
 
 cv::Mat meanimg(const std::vector<std::string>& files,
@@ -56,7 +66,8 @@ cv::Mat drawPoints(const cv::Mat& img, const std::vector<imagePatch>& patches);
 
 cv::Mat1f findShifts(const cv::Mat& img,
                      const std::vector<imagePatch>& patches,
-                     const std::vector<cv::Rect>& areas);
+                     const std::vector<cv::Rect>& areas,
+                     patchMatcher& matcher);
 
 cv::Mat3f lucky(const registrationParams& params,
                 const cv::Mat& refimg,

@@ -113,6 +113,18 @@ std::vector<imagePatch> selectPointsHex(const Mat& img,
 }
 
 
+Mat1f patchMatcher::match(Mat1f img, imagePatch patch)
+{
+  if (mask.size() != patch.image.size())
+    mask = Mat::ones(patch.image.rows, patch.image.cols, CV_32F);
+  Mat1f roi(img, patch.searchArea);
+  matchTemplate(roi.mul(roi), mask, areasq, CV_TM_CCORR);
+  matchTemplate(roi, patch.image, cor, CV_TM_CCORR);
+  Mat1f match = areasq - (cor.mul(cor) / patch.sqsum);
+  return match;
+}
+
+
 // Patch quality estimation
 //
 // Patch quality is assessed as follows: each patch is matched against its
@@ -149,15 +161,10 @@ std::vector<imagePatch> filterPatchesByQuality(const std::vector<imagePatch>& pa
   // Fit coefficients.
   Mat coeffs;
 
+  patchMatcher matcher;
   for (auto& patch : patches) {
     // perform the matching
-    Mat1f roi(refimg, patch.searchArea);
-    Mat1f mask = Mat::ones(patch.image.rows, patch.image.cols, CV_32F);
-    Mat1f areasq;
-    matchTemplate(roi.mul(roi), mask, areasq, CV_TM_CCORR);
-    Mat1f cor;
-    matchTemplate(roi, patch.image, cor, CV_TM_CCORR);
-    Mat1f match = areasq - (cor.mul(cor) / patch.sqsum);
+    Mat1f match = matcher.match(refimg, patch);
 
     // Find the local neighbourhood of the central point and fit a 2D
     // quadratic polynomial to it.
@@ -202,17 +209,11 @@ Mat drawPoints(const Mat& img, const std::vector<imagePatch>& patches) {
 
 
 Mat1f findShifts(const Mat& img,
-                 const std::vector<imagePatch>& patches) {
+                 const std::vector<imagePatch>& patches,
+                 patchMatcher& matcher) {
   Mat1f shifts(patches.size(), 2);
   for (int i = 0; i < (signed)patches.size(); i++) {
-    Mat1f roi(img, patches.at(i).searchArea);
-    Mat1f patch(patches.at(i).image);
-    Mat1f mask = Mat::ones(patch.rows, patch.cols, CV_32F);
-    Mat1f areasq;
-    matchTemplate(roi.mul(roi), mask, areasq, CV_TM_CCORR);
-    Mat1f cor;
-    matchTemplate(roi, patch, cor, CV_TM_CCORR);
-    Mat1f match = areasq - (cor.mul(cor) / patches.at(i).sqsum);
+    Mat1f match = matcher.match(img, patches.at(i));
     Point minpoint;
     minMaxLoc(match, NULL, NULL, &minpoint);
     if (minpoint.x == 0 || minpoint.y == 0 ||
@@ -246,6 +247,7 @@ Mat3f lucky(const registrationParams& params,
   #pragma omp parallel
   {
     Mat3f localsum(Mat3f::zeros(refimg.size()));
+    patchMatcher matcher;
     #pragma omp for schedule(dynamic)
     for (int ifile = 0; ifile < (signed)params.files.size(); ifile++) {
       Mat imgcolor;
@@ -254,7 +256,7 @@ Mat3f lucky(const registrationParams& params,
         imgcolor = imgcolor(globalReg.crop + globalReg.shifts.at(ifile));
       Mat1f img;
       cvtColor(imgcolor, img, CV_BGR2GRAY);
-      Mat1f shifts(findShifts(img, patches));
+      Mat1f shifts(findShifts(img, patches, matcher));
       Mat imremap(rbf.warp(imgcolor, shifts));
       localsum += imremap;
 
