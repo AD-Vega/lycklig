@@ -55,16 +55,15 @@ public:
   quadraticFit(const cv::Mat& data, const cv::Point& point);
   // Calculate the smaller of the two eigenvalues.
   float smallerEig() const;
+  cv::Point2f minimum() const;
 
 private:
   // A matrix of x^2, x*y and y^2 for the quadratic fit.
   static cv::Mat1f fitx;
-  // Local neighbourhood of the central point.
-  cv::Mat aroundMinimum;
-  // Same, but shaped as a column vector (for fitting).
-  cv::Mat amAsVector;
-  // Fit coefficients.
-  cv::Mat coeffs;
+  // Location of the minimum of the best matching quadratic function.
+  cv::Mat x0y0;
+  // The Hessian (divided by two).
+  cv::Mat H;
 };
 
 cv::Mat magickImread(const std::string& filename);
