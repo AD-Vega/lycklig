@@ -125,6 +125,41 @@ Mat1f patchMatcher::match(Mat1f img, imagePatch patch)
 }
 
 
+Mat1f quadraticFit::fitx = [] {
+  Mat1f fitx(9, 3, CV_32F);
+  int row = 0;
+  for (int x = -1; x <= 1; x++) {
+    for (int y = -1; y <= 1; y++) {
+      fitx.at<float>(row, 0) = x*x;
+      fitx.at<float>(row, 1) = x*y;
+      fitx.at<float>(row, 2) = y*y;
+      row++;
+    }
+  }
+  return fitx;
+}();
+
+
+quadraticFit::quadraticFit(const Mat& data, const Point& point) :
+  aroundMinimum(3, 3, CV_32F),
+  amAsVector(aroundMinimum.reshape(0, 9))
+{
+  Rect matchLocal3x3(point - Point(1, 1), Size(3, 3));
+  data(matchLocal3x3).copyTo(aroundMinimum);
+  solve(fitx, amAsVector, coeffs, DECOMP_SVD);
+}
+
+
+float quadraticFit::smallerEig() const {
+  // No need to call anything - the eigenvalues of a 2x2 Hessian are easily
+  // calculated with an analytical expression.
+  const float kxx = coeffs.at<float>(0);
+  const float kxy = 0.5*coeffs.at<float>(1);
+  const float kyy = coeffs.at<float>(2);
+  return 0.5*(kxx + kyy - sqrt(pow(kxx - kyy, 2) + 4*pow(kxy, 2)));
+}
+
+
 // Patch quality estimation
 //
 // Patch quality is assessed as follows: each patch is matched against its
@@ -170,16 +205,8 @@ std::vector<imagePatch> filterPatchesByQuality(const std::vector<imagePatch>& pa
     // quadratic polynomial to it.
     Point matchCenter(patch.x - patch.searchArea.x,
                       patch.y - patch.searchArea.y);
-    Rect matchLocal3x3(matchCenter - Point(1, 1), Size(3, 3));
-    match(matchLocal3x3).copyTo(aroundMinimum);
-    solve(fitx, amAsVector, coeffs, DECOMP_SVD);
-
-    // Calculate the smaller of the eigenvalues. Since this is only a 2x2
-    // Hessian, the analytical solution is used.
-    const float kxx = coeffs.at<float>(0);
-    const float kxy = 0.5*coeffs.at<float>(1);
-    const float kyy = coeffs.at<float>(2);
-    const float lowEig = 0.5*(kxx + kyy - sqrt(pow(kxx - kyy, 2) + 4*pow(kxy, 2)));
+    quadraticFit qf(match, matchCenter);
+    const float lowEig = qf.smallerEig();
 
     // No point in dealing with eigenvalues smaller than epsilon. We also
     // reject negative eigenvalues with this test.
