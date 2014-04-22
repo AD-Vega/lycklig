@@ -128,8 +128,8 @@ Mat1f patchMatcher::match(Mat1f img, imagePatch patch)
 Mat1f quadraticFit::fitx = [] {
   Mat1f fitx(9, 3, CV_32F);
   int row = 0;
-  for (int x = -1; x <= 1; x++) {
-    for (int y = -1; y <= 1; y++) {
+  for (int y = -1; y <= 1; y++) {
+    for (int x = -1; x <= 1; x++) {
       fitx.at<float>(row, 0) = x*x;
       fitx.at<float>(row, 1) = x*y;
       fitx.at<float>(row, 2) = y*y;
