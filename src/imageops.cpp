@@ -261,23 +261,28 @@ Mat1f findShifts(const Mat& img,
                  const std::vector<imagePatch>& patches,
                  patchMatcher& matcher) {
   Mat1f shifts(patches.size(), 2);
-  for (int i = 0; i < (signed)patches.size(); i++) {
-    Mat1f match = matcher.match(img, patches.at(i));
-    Point minpoint;
-    minMaxLoc(match, NULL, NULL, &minpoint);
-    if (minpoint.x == 0 || minpoint.y == 0 ||
-        minpoint.x == match.cols - 1 || minpoint.y == match.rows - 1) {
-      // A match was located in the outer 1px buffer zone. This is shady
-      // business. Pretend that we did not see anything.
-      minpoint = Point(0, 0);
+  int patchNr = 0;
+  for (auto& patch : patches) {
+    Mat1f match = matcher.match(img, patch);
+    Point coarseMin;
+    minMaxLoc(match, NULL, NULL, &coarseMin);
+    Point2f subPixelMin(0,0);
+    // Check whether the match was located in the outer 1px buffer zone
+    // (i.e., whether it has exceeded the given maxmove). This usually
+    // indicates an extremely questionable match and we rather leave
+    // the shift at (0,0) for this point.
+    if (coarseMin.x != 0 && coarseMin.y != 0 &&
+      coarseMin.x != match.cols - 1 && coarseMin.y != match.rows - 1) {
+      // The coarse estimate seems OK; do subpixel correction now.
+      subPixelMin = coarseMin;
+      subPixelMin += quadraticFit(match, coarseMin).minimum();
+      // The shift is reported relative to the top left corner in the
+      // image. Change it so that it refers to the center.
+      subPixelMin -= Point2f(patch.matchShiftx(), patch.matchShifty());
     }
-    else {
-      int xshift = patches.at(i).x - patches.at(i).searchArea.x;
-      int yshift = patches.at(i).y - patches.at(i).searchArea.y;
-      minpoint -= Point(xshift, yshift);
-    }
-    shifts.at<float>(i, 0) = minpoint.x;
-    shifts.at<float>(i, 1) = minpoint.y;
+    shifts.at<float>(patchNr, 0) = subPixelMin.x;
+    shifts.at<float>(patchNr, 1) = subPixelMin.y;
+    patchNr++;
   }
   return shifts;
 }

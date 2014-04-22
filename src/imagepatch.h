@@ -28,6 +28,8 @@ public:
     sqsum(sum(img.mul(img))[0]) {}
   inline int xcenter() const { return x + image.cols/2; }
   inline int ycenter() const { return y + image.rows/2; }
+  inline int matchShiftx() const { return x - searchArea.x; }
+  inline int matchShifty() const { return y - searchArea.y; }
 
   unsigned int x;
   unsigned int y;
