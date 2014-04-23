@@ -118,8 +118,8 @@ Mat1f patchMatcher::match(Mat1f img, imagePatch patch)
   if (mask.size() != patch.image.size())
     mask = Mat::ones(patch.image.rows, patch.image.cols, CV_32F);
   Mat1f roi(img, patch.searchArea);
-  matchTemplate(roi.mul(roi), mask, areasq, CV_TM_CCORR);
-  matchTemplate(roi, patch.image, cor, CV_TM_CCORR);
+  patch.cookedMask.match(roi.mul(roi), areasq);
+  patch.cookedTmpl.match(roi, cor);
   Mat1f match = areasq - (cor.mul(cor) / patch.sqsum);
   return match;
 }

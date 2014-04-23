@@ -16,30 +16,41 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef IMAGEPATCH_H
-#define IMAGEPATCH_H
+#ifndef COOKEDTEMPLATE_H
+#define COOKEDTEMPLATE_H
 
 #include <opencv2/core/core.hpp>
-#include "cookedtemplate.h"
 
-class imagePatch {
+class cookedXcor
+{
 public:
-  inline imagePatch(int xpos, int ypos, cv::Mat img, cv::Rect search) :
-    x(xpos), y(ypos), image(img), searchArea(search),
-    sqsum(sum(img.mul(img))[0]), cookedTmpl(img, search.size()),
-    cookedMask(cv::Mat::ones(img.size(), CV_32F), search.size()) {}
-  inline int xcenter() const { return x + image.cols/2; }
-  inline int ycenter() const { return y + image.rows/2; }
-  inline int matchShiftx() const { return x - searchArea.x; }
-  inline int matchShifty() const { return y - searchArea.y; }
+  cookedXcor() {};
+  cookedXcor(const cv::Mat& _templ, cv::Size corrsize, int ctype);
+  void xcor(const cv::Mat& img, cv::Mat& corr);
 
-  unsigned int x;
-  unsigned int y;
-  cv::Mat image;
-  cv::Rect searchArea;
-  double sqsum;
-  cookedTemplate cookedTmpl;
-  cookedTemplate cookedMask;
+private:
+  int ctype;
+  int maxDepth;
+  int tdepth;
+  int tcn;
+  cv::Size corrsize;
+  cv::Size templsize;
+  cv::Size blocksize;
+  cv::Size dftsize;
+  cv::Mat dftTempl;
 };
 
-#endif // IMAGEPATCH_H
+
+class cookedTemplate
+{
+public:
+  cookedTemplate(cv::InputArray _templ, cv::Size searchSize);
+  void match(cv::InputArray _img, cv::OutputArray _result);
+
+private:
+  int templType;
+  cv::Size corrSize;
+  cookedXcor cxc;
+};
+
+#endif // COOKEDTEMPLATE_H
