@@ -69,7 +69,7 @@ void rbfWarper::prepareCoeffs(const std::vector<imagePatch>& patches) {
         bases.at(j).at<float>(baseCenter);
     }
   }
-  coeffs = coeffs.inv(DECOMP_SVD);
+  coeffs = coeffs.inv(DECOMP_CHOLESKY);
 }
 
 
