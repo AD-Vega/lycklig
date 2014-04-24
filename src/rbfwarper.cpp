@@ -21,12 +21,15 @@
 
 using namespace cv;
 
-rbfWarper::rbfWarper(const vector<imagePatch>& patches, const Size& imagesize, const float sigma):
+rbfWarper::rbfWarper(const vector<imagePatch>& patches_,
+                     const Size& imagesize_,
+                     const float sigma_):
+  patches(patches_), imagesize(imagesize_), sigma(sigma_),
   bases(patches.size()), coeffs(patches.size(), patches.size()),
   xshiftbase(imagesize), yshiftbase(imagesize) {
 
-  prepareBases(patches, imagesize, sigma);
-  prepareCoeffs(patches);
+  prepareBases();
+  prepareCoeffs();
   for (int y = 0; y < imagesize.height; y++) {
     for (int x = 0; x < imagesize.width; x++) {
       xshiftbase.at<float>(y, x) = x;
@@ -43,9 +46,7 @@ void rbfWarper::gauss1d(float* ptr, const Range& range, const float sigma) {
 }
 
 
-void rbfWarper::prepareBases(const std::vector<imagePatch>& patches,
-                             const Size& imagesize,
-                             const float sigma) {
+void rbfWarper::prepareBases() {
   Mat1f row(1, 2*imagesize.width-1);
   gauss1d(row.ptr<float>(0), Range(-imagesize.width+1, imagesize.width), sigma);
   Mat1f col(2*imagesize.height-1, 1);
@@ -60,7 +61,7 @@ void rbfWarper::prepareBases(const std::vector<imagePatch>& patches,
 }
 
 
-void rbfWarper::prepareCoeffs(const std::vector<imagePatch>& patches) {
+void rbfWarper::prepareCoeffs() {
   for (int i = 0; i < (signed)bases.size(); i++) {
     Point baseCenter(patches.at(i).xcenter(), patches.at(i).ycenter());
     coeffs.at<float>(i, i) = 1;

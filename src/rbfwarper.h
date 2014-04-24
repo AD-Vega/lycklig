@@ -30,12 +30,13 @@ public:
 
 private:
   void gauss1d(float* ptr, const cv::Range& range, const float sigma);
-  void prepareBases(const std::vector<imagePatch>& patches,
-                    const cv::Size& imagesize,
-                    const float sigma);
-  void prepareCoeffs(const std::vector<imagePatch>& patches);
+  void prepareBases();
+  void prepareCoeffs();
 
 private:
+  const std::vector<imagePatch>& patches;
+  const cv::Size imagesize;
+  const float sigma;
   std::vector<cv::Mat1f> bases;
   cv::Mat1f coeffs;
   cv::Mat1f xshiftbase;
