@@ -293,14 +293,14 @@ Mat3f lucky(const registrationParams& params,
             const globalRegistration& globalReg,
             const std::vector<imagePatch>& patches,
             const bool showProgress) {
-  rbfWarper rbf(patches, refimg.size(), params.boxsize/4);
-  Mat3f finalsum(Mat3f::zeros(refimg.size()));
+  rbfWarper rbf(patches, refimg.size(), params.boxsize/4, params.supersampling);
+  Mat3f finalsum(Mat3f::zeros(refimg.size() * params.supersampling));
   int progress = 0;
   if (showProgress)
     std::fprintf(stderr, "0/%ld", params.files.size());
   #pragma omp parallel
   {
-    Mat3f localsum(Mat3f::zeros(refimg.size()));
+    Mat3f localsum(Mat3f::zeros(refimg.size() * params.supersampling));
     patchMatcher matcher;
     #pragma omp for schedule(dynamic)
     for (int ifile = 0; ifile < (signed)params.files.size(); ifile++) {

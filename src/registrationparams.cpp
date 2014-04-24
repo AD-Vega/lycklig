@@ -19,6 +19,18 @@
 #include <tclap/CmdLine.h>
 #include "registrationparams.h"
 
+class naturalNumberConstraint : public TCLAP::Constraint<unsigned int>
+{
+public:
+  std::string description() const
+    { return "integer >= 1"; }
+  std::string shortID() const
+    { return "N"; }
+  bool check(const unsigned int& value) const
+    { return (value >= 1); }
+} nnConstraint;
+
+
 template <typename num_t>
 std::string defval(num_t d)
 {
@@ -51,6 +63,9 @@ bool registrationParams::parse(const int argc, const char* argv[])
     TCLAP::ValueArg<unsigned int> arg_maxmove(
       "m", "maxmove", "Maximum displacement " + defval(maxmove), false, maxmove, "pixels");
     cmd.add(arg_maxmove);
+    TCLAP::ValueArg<unsigned int> arg_supersampling(
+      "s", "super", "Supersampling " + defval(supersampling), false, supersampling, "N");
+    cmd.add(arg_supersampling);
     TCLAP::ValueArg<std::string> arg_output_file(
       "o", "output", "Output file", true, "", "filename");
     cmd.add(arg_output_file);
@@ -62,6 +77,7 @@ bool registrationParams::parse(const int argc, const char* argv[])
 
     boxsize = arg_boxsize.getValue();
     maxmove = arg_maxmove.getValue();
+    supersampling = arg_supersampling.getValue();
     output_file = arg_output_file.getValue();
     files = arg_files.getValue();
 

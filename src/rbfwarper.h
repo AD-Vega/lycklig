@@ -24,8 +24,9 @@
 class rbfWarper {
 public:
   rbfWarper(const std::vector<imagePatch>& patches,
-	    const cv::Size& imagesize,
-	    const float sigma);
+            const cv::Size& imagesize,
+            const float sigma,
+            const int supersampling = 1);
   cv::Mat warp(const cv::Mat& image, const cv::Mat1f& shifts) const;
 
 private:
@@ -37,6 +38,7 @@ private:
   const std::vector<imagePatch>& patches;
   const cv::Size imagesize;
   const float sigma;
+  const int supersampling;
   std::vector<cv::Mat1f> bases;
   cv::Mat1f coeffs;
   cv::Mat1f xshiftbase;

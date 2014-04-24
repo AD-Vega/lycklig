@@ -23,8 +23,10 @@ using namespace cv;
 
 rbfWarper::rbfWarper(const vector<imagePatch>& patches_,
                      const Size& imagesize_,
-                     const float sigma_):
-  patches(patches_), imagesize(imagesize_), sigma(sigma_),
+                     const float sigma_,
+                     const int supersampling_):
+  patches(patches_), imagesize(imagesize_*supersampling_),
+  sigma(sigma_*supersampling_), supersampling(supersampling_),
   bases(patches.size()), coeffs(patches.size(), patches.size()),
   xshiftbase(imagesize), yshiftbase(imagesize) {
 
@@ -32,8 +34,8 @@ rbfWarper::rbfWarper(const vector<imagePatch>& patches_,
   prepareCoeffs();
   for (int y = 0; y < imagesize.height; y++) {
     for (int x = 0; x < imagesize.width; x++) {
-      xshiftbase.at<float>(y, x) = x;
-      yshiftbase.at<float>(y, x) = y;
+      xshiftbase.at<float>(y, x) = (2*(float)x - supersampling + 1)/(2*supersampling);
+      yshiftbase.at<float>(y, x) = (2*(float)y - supersampling + 1)/(2*supersampling);
     }
   }
 }
@@ -55,7 +57,8 @@ void rbfWarper::prepareBases() {
   Point gaussCenter(imagesize.width, imagesize.height);
 
   for (int i = 0; i < (signed)patches.size(); i++) {
-    Point baseCenter(patches.at(i).xcenter(), patches.at(i).ycenter());
+    Point baseCenter(patches.at(i).xcenter()*supersampling,
+                     patches.at(i).ycenter()*supersampling);
     bases.at(i) = bigGauss(Rect(gaussCenter-baseCenter, imagesize));
   }
 }
@@ -63,7 +66,8 @@ void rbfWarper::prepareBases() {
 
 void rbfWarper::prepareCoeffs() {
   for (int i = 0; i < (signed)bases.size(); i++) {
-    Point baseCenter(patches.at(i).xcenter(), patches.at(i).ycenter());
+    Point baseCenter(patches.at(i).xcenter()*supersampling,
+                     patches.at(i).ycenter()*supersampling);
     coeffs.at<float>(i, i) = 1;
     for (int j = i+1; j < (signed)bases.size(); j++) {
       coeffs.at<float>(i, j) = coeffs.at<float>(j, i) = 

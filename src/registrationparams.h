@@ -33,6 +33,7 @@ public:
   bool only_stack = false;
   unsigned int boxsize = 60;
   unsigned int maxmove = 20;
+  int supersampling = 1;
   std::string output_file;
   std::vector<std::string> files;
 };
