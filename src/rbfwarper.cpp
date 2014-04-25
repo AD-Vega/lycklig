@@ -87,6 +87,6 @@ Mat rbfWarper::warp(const Mat& image, const Mat1f& shifts) const {
     yshift += bases.at(i) * weights.at<float>(i, 1);
   }
   Mat imremap;
-  remap(image, imremap, xshift, yshift, CV_INTER_LINEAR);
+  remap(image, imremap, xshift, yshift, CV_INTER_LINEAR, BORDER_REFLECT);
   return imremap;
 }
