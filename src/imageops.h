@@ -53,9 +53,15 @@ private:
 class quadraticFit {
 public:
   quadraticFit(const cv::Mat& data, const cv::Point& point);
-  // Calculate the smaller of the two eigenvalues.
-  float smallerEig() const;
   cv::Point2f minimum() const;
+  // The smaller of the two eigenvalues.
+  float smallerEig() const;
+  // The larger of the two eigenvalues.
+  float largerEig() const;
+  // Eigenvector corresponding to the smaller eigenvalue.
+  cv::Point2f smallerEigVec() const;
+  // Eigenvector corresponding to the larger eigenvalue.
+  cv::Point2f largerEigVec() const;
 
 private:
   // A matrix of x^2, x*y and y^2 for the quadratic fit.
@@ -64,6 +70,8 @@ private:
   cv::Mat x0y0;
   // The Hessian (divided by two).
   cv::Mat H;
+  cv::Mat eigenvalues;
+  cv::Mat eigenvectors;
 };
 
 cv::Mat magickImread(const std::string& filename);

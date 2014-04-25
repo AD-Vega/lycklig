@@ -165,20 +165,30 @@ quadraticFit::quadraticFit(const Mat& data, const Point& point) {
   S.at<float>(1, 0) = x0y0.at<float>(0);
   S.at<float>(2, 0) = x0y0.at<float>(1);
   H = S.t() * H * S;
+  eigen(H(Range(1,3), Range(1,3)), eigenvalues, eigenvectors);
 }
 
-
-float quadraticFit::smallerEig() const {
-  // No need to call anything - the eigenvalues of a 2x2 Hessian are easily
-  // calculated with an analytical expression.
-  const float kxx = H.at<float>(1, 1);
-  const float kxy = H.at<float>(1, 2);
-  const float kyy = H.at<float>(2, 2);
-  return 0.5*(kxx + kyy - sqrt(pow(kxx - kyy, 2) + 4*pow(kxy, 2)));
-}
 
 Point2f quadraticFit::minimum() const {
   return Point2f(x0y0.at<float>(0), x0y0.at<float>(1));
+}
+
+float quadraticFit::largerEig() const {
+  return eigenvalues.at<float>(0);
+}
+
+float quadraticFit::smallerEig() const {
+  return eigenvalues.at<float>(1);
+}
+
+Point2f quadraticFit::largerEigVec() const
+{
+  return Point2f(eigenvectors.at<float>(0, 0), eigenvectors.at<float>(1, 0));
+}
+
+Point2f quadraticFit::smallerEigVec() const
+{
+  return Point2f(eigenvectors.at<float>(0, 1), eigenvectors.at<float>(1, 1));
 }
 
 
@@ -256,7 +266,18 @@ Mat1f findShifts(const Mat& img,
       coarseMin.x != match.cols - 1 && coarseMin.y != match.rows - 1) {
       // The coarse estimate seems OK; do subpixel correction now.
       subPixelMin = coarseMin;
-      subPixelMin += quadraticFit(match, coarseMin).minimum();
+      quadraticFit qf(match, coarseMin);
+      Point2f subShift = qf.minimum();
+      if (norm(subShift) > 0.5) {
+        // Subpixel correction larger than 0.5 px indicates poor fit. Project
+        // out the direction corresponding to the smaller eigenvalue and see
+        // if that helps.
+        subShift = subShift.dot(qf.largerEigVec()) * qf.largerEigVec();
+        // Give up if the shift is still larger than 0.5 px.
+        if (norm(subShift) > 0.5)
+          subShift = Point2f(0, 0);
+      }
+      subPixelMin += subShift;
       // The shift is reported relative to the top left corner in the
       // image. Change it so that it refers to the center.
       subPixelMin -= Point2f(patch.matchShiftx(), patch.matchShifty());
