@@ -199,25 +199,6 @@ std::vector<imagePatch> filterPatchesByQuality(const std::vector<imagePatch>& pa
   // Patches that are good enough will be returned in this vector.
   std::vector<imagePatch> newPatches;
 
-  // A matrix of x^2, x*y and y^2 that will be needed for the quadratic fit.
-  Mat fitx(9, 3, CV_32F);
-  int row = 0;
-  for (int x = -1; x <= 1; x++) {
-    for (int y = -1; y <= 1; y++) {
-      fitx.at<float>(row, 0) = x*x;
-      fitx.at<float>(row, 1) = x*y;
-      fitx.at<float>(row, 2) = y*y;
-      row++;
-    }
-  }
-
-  // Local neighbourhood of the central point.
-  Mat aroundMinimum(3, 3, CV_32F);
-  // Same, but shaped as a column vector (for fitting).
-  Mat amAsVector = aroundMinimum.reshape(0, 9);
-  // Fit coefficients.
-  Mat coeffs;
-
   patchMatcher matcher;
   for (auto& patch : patches) {
     // perform the matching
