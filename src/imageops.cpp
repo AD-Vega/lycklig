@@ -29,8 +29,46 @@ Mat magickImread(const std::string& filename)
   cv::Mat output(image.rows(), image.columns(), CV_32FC3);
   image.write(0, 0, image.columns(), image.rows(),
                  "BGR", Magick::FloatPixel, output.data);
+  sRGB2linearRGB(output);
   return output;
 }
+
+
+void sRGB2linearRGB(Mat& img) {
+  int rows = img.rows;
+  int cols = img.cols;
+  if (img.isContinuous()) {
+    cols *= rows;
+    rows = 1;
+  }
+  for(int row = 0; row < rows; row++)
+  {
+    float* ptr = img.ptr<float>(row);
+    for (int i = 0; i < 3*cols; i++) {
+      *ptr = (*ptr <= 0.04045 ? *ptr/12.92 : pow((*ptr + 0.055)/1.055, 2.4));
+      ptr++;
+    }
+  }
+}
+
+
+void linearRGB2sRGB(Mat& img) {
+  int rows = img.rows;
+  int cols = img.cols;
+  if (img.isContinuous()) {
+    cols *= rows;
+    rows = 1;
+  }
+  for(int row = 0; row < rows; row++)
+  {
+    float* ptr = img.ptr<float>(row);
+    for (int i = 0; i < 3*cols; i++) {
+      *ptr = (*ptr <= 0.0031308 ? *ptr*12.92 : 1.055*pow(*ptr, 1/2.4) - 0.055);
+      ptr++;
+    }
+  }
+}
+
 
 Mat grayReader::read(const string& file) {
   magickImread(file.c_str()).convertTo(imgcolor, CV_32F);
@@ -335,7 +373,9 @@ Mat3w normalizeTo16Bits(const Mat& inputImg) {
   Mat img = inputImg.clone();
   double minval, maxval;
   minMaxLoc(img, &minval, &maxval);
-  img = (img - minval)/(maxval - minval) * ((1<<16)-1);
+  img = (img - minval)/(maxval - minval);
+  linearRGB2sRGB(img);
+  img *= ((1<<16)-1);
   Mat3w imgout;
   img.convertTo(imgout, CV_16UC3);
   return imgout;

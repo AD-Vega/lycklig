@@ -76,6 +76,10 @@ private:
 
 cv::Mat magickImread(const std::string& filename);
 
+void sRGB2linearRGB(cv::Mat& img);
+
+void linearRGB2sRGB(cv::Mat& img);
+
 cv::Mat meanimg(const std::vector<std::string>& files,
                 const globalRegistration& globalReg,
                 const bool showProgress = false);
