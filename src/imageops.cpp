@@ -140,10 +140,8 @@ std::vector<imagePatch> selectPointsHex(const Mat& img,
          x <= img.cols - boxsize - maxmb;
          x += xydiff) {
       Mat roi(img, Rect(x, y, boxsize, boxsize));
-      Mat1f roif;
-      roi.convertTo(roif, CV_32F);
       Rect searchArea(Point(x-maxmb, y-maxmb), Point(x+boxsize+maxmb, y+boxsize+maxmb));
-      imagePatch p(x, y, roif, searchArea);
+      imagePatch p(x, y, roi, searchArea);
       patches.push_back(p);
     }
   }
@@ -327,19 +325,19 @@ Mat1f findShifts(const Mat& img,
 }
 
 
-Mat3f lucky(const registrationParams& params,
+Mat lucky(const registrationParams& params,
             const Mat& refimg,
             const globalRegistration& globalReg,
             const std::vector<imagePatch>& patches,
             const bool showProgress) {
   rbfWarper rbf(patches, refimg.size(), params.boxsize/4, params.supersampling);
-  Mat3f finalsum(Mat3f::zeros(refimg.size() * params.supersampling));
+  Mat finalsum(Mat::zeros(refimg.size() * params.supersampling, CV_32FC3));
   int progress = 0;
   if (showProgress)
     std::fprintf(stderr, "0/%ld", params.files.size());
   #pragma omp parallel
   {
-    Mat3f localsum(Mat3f::zeros(refimg.size() * params.supersampling));
+    Mat localsum(Mat::zeros(refimg.size() * params.supersampling, CV_32FC3));
     patchMatcher matcher;
     #pragma omp for schedule(dynamic)
     for (int ifile = 0; ifile < (signed)params.files.size(); ifile++) {
@@ -368,14 +366,14 @@ Mat3f lucky(const registrationParams& params,
 }
 
 
-Mat3w normalizeTo16Bits(const Mat& inputImg) {
+Mat normalizeTo16Bits(const Mat& inputImg) {
   Mat img = inputImg.clone();
   double minval, maxval;
   minMaxLoc(img, &minval, &maxval);
   img = (img - minval)/(maxval - minval);
   linearRGB2sRGB(img);
   img *= ((1<<16)-1);
-  Mat3w imgout;
+  Mat imgout;
   img.convertTo(imgout, CV_16UC3);
   return imgout;
 }

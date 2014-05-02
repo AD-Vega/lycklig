@@ -97,12 +97,12 @@ cv::Mat1f findShifts(const cv::Mat& img,
                      const std::vector<cv::Rect>& areas,
                      patchMatcher& matcher);
 
-cv::Mat3f lucky(const registrationParams& params,
+cv::Mat lucky(const registrationParams& params,
                 const cv::Mat& refimg,
                 const globalRegistration& globalReg,
                 const std::vector<imagePatch>& patches,
                 const bool showProgress = false);
 
-cv::Mat3w normalizeTo16Bits(const cv::Mat& inputImg);
+cv::Mat normalizeTo16Bits(const cv::Mat& inputImg);
 
 #endif // IMAGEOPS_H
