@@ -26,7 +26,7 @@ class cookedXcor
 public:
   cookedXcor() {};
   cookedXcor(const cv::Mat& _templ, cv::Size corrsize, int ctype);
-  void xcor(const cv::Mat& img, cv::Mat& corr);
+  void xcor(const cv::Mat& img, cv::Mat& corr) const;
 
 private:
   int ctype;
@@ -45,7 +45,7 @@ class cookedTemplate
 {
 public:
   cookedTemplate(cv::InputArray _templ, cv::Size searchSize);
-  void match(cv::InputArray _img, cv::OutputArray _result);
+  void match(cv::InputArray _img, cv::OutputArray _result) const;
 
 private:
   int templType;

@@ -42,7 +42,7 @@ private:
 
 class patchMatcher {
 public:
-  cv::Mat1f match(cv::Mat1f img, imagePatch patch);
+  cv::Mat1f match(const cv::Mat1f& img, const imagePatch& patch);
 
 private:
   cv::Mat1f mask;

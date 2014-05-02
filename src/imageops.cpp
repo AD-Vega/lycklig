@@ -151,7 +151,7 @@ std::vector<imagePatch> selectPointsHex(const Mat& img,
 }
 
 
-Mat1f patchMatcher::match(Mat1f img, imagePatch patch)
+Mat1f patchMatcher::match(const Mat1f& img, const imagePatch& patch)
 {
   if (mask.size() != patch.image.size())
     mask = Mat::ones(patch.image.rows, patch.image.cols, CV_32F);

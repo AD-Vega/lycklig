@@ -95,7 +95,7 @@ cookedXcor::cookedXcor(const Mat& _templ, Size _corrsize, int _ctype) :
 }
 
 
-void cookedXcor::xcor(const Mat& img, Mat& corr)
+void cookedXcor::xcor(const Mat& img, Mat& corr) const
 {
     Point anchor(0, 0);
     const double delta = 0;
@@ -235,7 +235,7 @@ cookedTemplate::cookedTemplate(InputArray _templ, Size searchSize)
 }
 
 
-void cookedTemplate::match(InputArray _img, OutputArray _result)
+void cookedTemplate::match(InputArray _img, OutputArray _result) const
 {
   Mat img = _img.getMat();
   CV_Assert(img.depth() == CV_32F);
