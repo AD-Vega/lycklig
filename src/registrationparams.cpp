@@ -57,6 +57,10 @@ bool registrationParams::parse(const int argc, const char* argv[])
     TCLAP::SwitchArg arg_only_stack(
       "n", "only-stack", "Don't do lucky imaging: only stack (possibly pre-registered) images.", false);
     cmd.add(arg_only_stack);
+    TCLAP::SwitchArg arg_crop(
+      "c", "crop", "Crop the image to the area common to all input images "
+                   "(only effective with pre-registration; a no-op otherwise).", false);
+    cmd.add(arg_crop);
     TCLAP::ValueArg<unsigned int> arg_boxsize(
       "b", "boxsize", "Box size " + defval(boxsize), false, boxsize, "pixels");
     cmd.add(arg_boxsize);
@@ -80,6 +84,8 @@ bool registrationParams::parse(const int argc, const char* argv[])
     supersampling = arg_supersampling.getValue();
     output_file = arg_output_file.getValue();
     files = arg_files.getValue();
+    only_stack = arg_only_stack.isSet();
+    crop = arg_crop.isSet();
 
     if (arg_prereg_img.isSet() + arg_prereg_first.isSet() > 1) {
       std::cerr << "PARSE ERROR: arguments --prereg-img and --prereg-first\n"
@@ -94,8 +100,6 @@ bool registrationParams::parse(const int argc, const char* argv[])
       prereg = true;
       prereg_img = files.at(0);
     }
-    if (arg_only_stack.isSet())
-      only_stack = true;
   }
   catch (TCLAP::ArgException &e)
   {

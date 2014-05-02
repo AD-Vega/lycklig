@@ -49,7 +49,7 @@ int main(const int argc, const char *argv[]) {
   }
 
   std::cerr << "Creating a stacked reference image\n";
-  Mat rawRef = meanimg(params.files, globalRegResult, true);
+  Mat rawRef = meanimg(params, globalRegResult, true);
   if (params.only_stack) {
     imwrite(params.output_file, normalizeTo16Bits(rawRef));
     return 0;

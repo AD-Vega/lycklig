@@ -82,7 +82,7 @@ void sRGB2linearRGB(cv::Mat& img);
 
 void linearRGB2sRGB(cv::Mat& img);
 
-cv::Mat meanimg(const std::vector<std::string>& files,
+cv::Mat meanimg(const registrationParams& params,
                 const globalRegistration& globalReg,
                 const bool showProgress = false);
 

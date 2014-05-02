@@ -21,13 +21,10 @@
 using namespace cv;
 
 void globalRegistration::calculateOptimalCrop(const Size& size) {
-  crop = Rect(shifts.at(0), size);
-  Rect origin(shifts.at(0), size);
+  crop = Rect(-shifts.at(0), size);
   for (auto& shift : shifts) {
-        crop &= Rect(shift, size);
-        origin |= Rect(shift, size);
+        crop &= Rect(-shift, size);
   }
-  crop -= crop.tl() + origin.tl();
 }
 
 

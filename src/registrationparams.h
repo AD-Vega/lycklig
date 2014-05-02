@@ -31,6 +31,7 @@ public:
   std::string prereg_img;
   unsigned int prereg_maxmove = 0;
   bool only_stack = false;
+  bool crop = false;
   unsigned int boxsize = 60;
   unsigned int maxmove = 20;
   int supersampling = 1;

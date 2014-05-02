@@ -76,14 +76,18 @@ Mat grayReader::read(const string& file) {
   return imggray;
 }
 
-Mat meanimg(const std::vector<std::string>& files,
+Mat meanimg(const registrationParams& params,
             const globalRegistration& globalReg,
             const bool showProgress) {
+  const auto& files = params.files;
   Mat sample = magickImread(files.at(0));
-  Rect crop(Point(0, 0), sample.size());
-  if (globalReg.valid)
-    crop = globalReg.crop;
-  Mat imgmean(Mat::zeros(crop.size(), CV_MAKETYPE(CV_32F, sample.channels())));
+  Rect imgRect(Point(0, 0), sample.size());
+  Mat imgmean;
+  if (params.crop && globalReg.valid)
+    imgmean = Mat::zeros(globalReg.crop.size(), CV_MAKETYPE(CV_32F, sample.channels()));
+  else
+    imgmean = Mat::zeros(sample.size(), CV_MAKETYPE(CV_32F, sample.channels()));
+
   int progress = 0;
   if (showProgress)
     std::fprintf(stderr, "0/%ld", files.size());
@@ -95,8 +99,16 @@ Mat meanimg(const std::vector<std::string>& files,
     for (int i = 0; i < (signed)files.size(); i++) {
       Mat img = magickImread(files.at(i));
 
-      if (globalReg.valid)
-        accumulate(img(crop + globalReg.shifts.at(i)), localsum);
+      if (globalReg.valid) {
+        auto shift = globalReg.shifts.at(i);
+        if (params.crop)
+          accumulate(img(globalReg.crop + shift), localsum);
+        else {
+          Rect sourceRoi = (imgRect + shift) & imgRect;
+          Rect destRoi = sourceRoi - shift;
+          accumulate(img(sourceRoi), localsum(destRoi));
+        }
+      }
       else
         accumulate(img, localsum);
 
@@ -327,6 +339,7 @@ Mat1f findShifts(const Mat& img,
   return shifts;
 }
 
+#include <iostream>
 
 Mat lucky(const registrationParams& params,
             const Mat& refimg,
@@ -335,7 +348,12 @@ Mat lucky(const registrationParams& params,
             const bool showProgress) {
   rbfWarper rbf(patches, refimg.size(), params.boxsize/4, params.supersampling);
   const float refimgsq = sum(refimg.mul(refimg))[0];
-  Mat finalsum(Mat::zeros(refimg.size() * params.supersampling, CV_32FC3));
+  Mat finalsum;
+  if (params.crop && globalReg.valid)
+    finalsum = Mat::zeros(globalReg.crop.size() * params.supersampling, CV_32FC3);
+  else
+    finalsum = Mat::zeros(refimg.size() * params.supersampling, CV_32FC3);
+
   int progress = 0;
   if (showProgress)
     std::fprintf(stderr, "0/%ld", params.files.size());
@@ -347,8 +365,19 @@ Mat lucky(const registrationParams& params,
     for (int ifile = 0; ifile < (signed)params.files.size(); ifile++) {
       Mat imgcolor;
       magickImread(params.files.at(ifile).c_str()).convertTo(imgcolor, CV_32F);
-      if (params.prereg)
-        imgcolor = imgcolor(globalReg.crop + globalReg.shifts.at(ifile));
+      if (globalReg.valid) {
+        auto shift = globalReg.shifts.at(ifile);
+        if (params.crop)
+          imgcolor = imgcolor(globalReg.crop + shift);
+        else {
+          Mat tmp = Mat::zeros(imgcolor.size(), imgcolor.type());
+          Rect imgRect(Point(0, 0), imgcolor.size());
+          Rect sourceRoi = (imgRect + shift) & imgRect;
+          Rect destRoi = sourceRoi - shift;
+          imgcolor(sourceRoi).copyTo(tmp(destRoi));
+          imgcolor = tmp;
+        }
+      }
       Mat1f img;
       cvtColor(imgcolor, img, CV_BGR2GRAY);
       const float multiplier = sum(img.mul(refimg))[0] / refimgsq;
