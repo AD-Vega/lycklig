@@ -42,7 +42,9 @@ private:
 
 class patchMatcher {
 public:
-  cv::Mat1f match(const cv::Mat1f& img, const imagePatch& patch);
+  cv::Mat1f match(const cv::Mat1f& img,
+                  const imagePatch& patch,
+                  const float multiplier);
 
 private:
   cv::Mat1f mask;
@@ -91,11 +93,6 @@ std::vector<imagePatch> filterPatchesByQuality(const std::vector<imagePatch>& pa
                                                const cv::Mat& refimg);
 
 cv::Mat drawPoints(const cv::Mat& img, const std::vector<imagePatch>& patches);
-
-cv::Mat1f findShifts(const cv::Mat& img,
-                     const std::vector<imagePatch>& patches,
-                     const std::vector<cv::Rect>& areas,
-                     patchMatcher& matcher);
 
 cv::Mat lucky(const registrationParams& params,
                 const cv::Mat& refimg,

@@ -149,14 +149,16 @@ std::vector<imagePatch> selectPointsHex(const Mat& img,
 }
 
 
-Mat1f patchMatcher::match(const Mat1f& img, const imagePatch& patch)
+Mat1f patchMatcher::match(const Mat1f& img,
+                          const imagePatch& patch,
+                          const float multiplier)
 {
   if (mask.size() != patch.image.size())
     mask = Mat::ones(patch.image.rows, patch.image.cols, CV_32F);
   Mat1f roi(img, patch.searchArea);
   patch.cookedMask.match(roi.mul(roi), areasq);
   patch.cookedTmpl.match(roi, cor);
-  Mat1f match = areasq - (cor.mul(cor) / patch.sqsum);
+  Mat1f match = areasq - 2*multiplier*cor + pow(multiplier, 2)*patch.sqsum;
   return match;
 }
 
@@ -248,7 +250,7 @@ std::vector<imagePatch> filterPatchesByQuality(const std::vector<imagePatch>& pa
   patchMatcher matcher;
   for (auto& patch : patches) {
     // perform the matching
-    Mat1f match = matcher.match(refimg, patch);
+    Mat1f match = matcher.match(refimg, patch, 1.0);
 
     // Find the local neighbourhood of the central point and fit a 2D
     // quadratic polynomial to it.
@@ -285,11 +287,12 @@ Mat drawPoints(const Mat& img, const std::vector<imagePatch>& patches) {
 
 Mat1f findShifts(const Mat& img,
                  const std::vector<imagePatch>& patches,
+                 const float multiplier,
                  patchMatcher& matcher) {
   Mat1f shifts(patches.size(), 2);
   int patchNr = 0;
   for (auto& patch : patches) {
-    Mat1f match = matcher.match(img, patch);
+    Mat1f match = matcher.match(img, patch, multiplier);
     Point coarseMin;
     minMaxLoc(match, NULL, NULL, &coarseMin);
     Point2f subPixelMin(0,0);
@@ -331,6 +334,7 @@ Mat lucky(const registrationParams& params,
             const std::vector<imagePatch>& patches,
             const bool showProgress) {
   rbfWarper rbf(patches, refimg.size(), params.boxsize/4, params.supersampling);
+  const float refimgsq = sum(refimg.mul(refimg))[0];
   Mat finalsum(Mat::zeros(refimg.size() * params.supersampling, CV_32FC3));
   int progress = 0;
   if (showProgress)
@@ -347,7 +351,8 @@ Mat lucky(const registrationParams& params,
         imgcolor = imgcolor(globalReg.crop + globalReg.shifts.at(ifile));
       Mat1f img;
       cvtColor(imgcolor, img, CV_BGR2GRAY);
-      Mat1f shifts(findShifts(img, patches, matcher));
+      const float multiplier = sum(img.mul(refimg))[0] / refimgsq;
+      Mat1f shifts(findShifts(img, patches, multiplier, matcher));
       Mat imremap(rbf.warp(imgcolor, shifts));
       localsum += imremap;
 
