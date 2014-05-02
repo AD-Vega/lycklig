@@ -254,8 +254,7 @@ std::vector<imagePatch> filterPatchesByQuality(const std::vector<imagePatch>& pa
 
     // Find the local neighbourhood of the central point and fit a 2D
     // quadratic polynomial to it.
-    Point matchCenter(patch.x - patch.searchArea.x,
-                      patch.y - patch.searchArea.y);
+    Point matchCenter(patch.matchShiftx(), patch.matchShiftx());
     quadraticFit qf(match, matchCenter);
     const float lowEig = qf.smallerEig();
 
