@@ -318,13 +318,13 @@ Mat1f findShifts(const Mat& img,
       subPixelMin = coarseMin;
       quadraticFit qf(match, coarseMin);
       Point2f subShift = qf.minimum();
-      if (subShift.x > 0.5 || subShift.y > 0.5) {
+      if (abs(subShift.x) > 0.5 || abs(subShift.y) > 0.5) {
         // Subpixel correction larger than 0.5 px indicates poor fit. Project
         // out the direction corresponding to the smaller eigenvalue and see
         // if that helps.
         subShift = subShift.dot(qf.largerEigVec()) * qf.largerEigVec();
         // Give up if the shift is still larger than 0.5 px.
-        if ((subShift.x > 0.5 || subShift.y > 0.5))
+        if (abs(subShift.x) > 0.5 || abs(subShift.y) > 0.5)
           subShift = Point2f(0, 0);
       }
       subPixelMin += subShift;
