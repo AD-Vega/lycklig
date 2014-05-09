@@ -62,14 +62,15 @@ int main(const int argc, const char *argv[]) {
   Mat refimg;
   rawRef.convertTo(refimg, CV_32F);
   cvtColor(refimg, refimg, CV_BGR2GRAY);
+  context.refimg = refimg;
 
   std::cerr << "Lucky imaging: creating registration patches\n";
-  context.patches = selectPointsHex(refimg, params);
-  context.patches = filterPatchesByQuality(context.patches, refimg);
+  auto patches = selectPointsHex(params, context);
+  context.patches = filterPatchesByQuality(patches, context.refimg);
   std::cerr << context.patches.size() << " valid patches\n";
 
   std::cerr << "Lucky imaging: registration & warping\n";
-  Mat finalsum = lucky(params, context, refimg, true);
+  Mat finalsum = lucky(params, context, true);
 
   imwrite(params.output_file, normalizeTo16Bits(finalsum));
   return 0;

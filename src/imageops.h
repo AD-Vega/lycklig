@@ -87,8 +87,8 @@ cv::Mat meanimg(const registrationParams& params,
                 const registrationContext& context,
                 const bool showProgress = false);
 
-std::vector<imagePatch> selectPointsHex(const cv::Mat& img,
-                                        const registrationParams& params);
+std::vector<imagePatch> selectPointsHex(const registrationParams& params,
+                                        const registrationContext& context);
 
 std::vector<imagePatch> filterPatchesByQuality(const std::vector<imagePatch>& patches,
                                                const cv::Mat& refimg);
@@ -97,7 +97,6 @@ cv::Mat drawPoints(const cv::Mat& img, const std::vector<imagePatch>& patches);
 
 cv::Mat lucky(const registrationParams& params,
               const registrationContext& context,
-              const cv::Mat& refimg,
               const bool showProgress = false);
 
 cv::Mat normalizeTo16Bits(const cv::Mat& inputImg);

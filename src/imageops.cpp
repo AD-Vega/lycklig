@@ -129,11 +129,11 @@ Mat meanimg(const registrationParams& params,
   return imgmean;
 }
 
-
-std::vector<imagePatch> selectPointsHex(const Mat& img,
-                                        const registrationParams& params) {
+std::vector<imagePatch> selectPointsHex(const registrationParams& params,
+                                        const registrationContext& context) {
+  const auto& refimg = context.refimg;
   std::vector<imagePatch> patches;
-  Rect imgrect(Point(0, 0), img.size());
+  Rect imgrect(Point(0, 0), refimg.size());
   const int boxsize = params.boxsize;
 
   // We set maximum displacement to maxmove+1: the 1px border is used as a
@@ -150,11 +150,11 @@ std::vector<imagePatch> selectPointsHex(const Mat& img,
   int yspacing = ceil(xydiff*sqrt(0.75));
   const int xshift = xydiff/2;
   int period = 0;
-  for (int y = maxmb; y <= img.rows - boxsize - maxmb; y += yspacing, period++) {
+  for (int y = maxmb; y <= refimg.rows - boxsize - maxmb; y += yspacing, period++) {
     for (int x = maxmb + (period % 2 ? xshift : 0);
-         x <= img.cols - boxsize - maxmb;
+         x <= refimg.cols - boxsize - maxmb;
          x += xydiff) {
-      Mat roi(img, Rect(x, y, boxsize, boxsize));
+      Mat roi(refimg, Rect(x, y, boxsize, boxsize));
       Rect searchArea(Point(x-maxmb, y-maxmb), Point(x+boxsize+maxmb, y+boxsize+maxmb));
       imagePatch p(roi, x, y, searchArea);
       patches.push_back(p);
@@ -346,8 +346,8 @@ Mat1f findShifts(const Mat& img,
 
 Mat lucky(const registrationParams& params,
           const registrationContext& context,
-          const Mat& refimg,
           const bool showProgress) {
+  const auto& refimg = context.refimg;
   rbfWarper rbf(context.patches, refimg.size(), params.boxsize/4, params.supersampling);
   const float refimgsq = sum(refimg.mul(refimg))[0];
   const bool globalRegValid = (context.crop.width > 0 && context.crop.height > 0);
