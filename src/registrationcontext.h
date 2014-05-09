@@ -26,20 +26,28 @@
 
 class inputImage {
 public:
-  inputImage(std::string filename_) :
-    filename(filename_), globalShift(0, 0)
-    {};
+  inputImage(std::string filename_);
+  void write(cv::FileStorage& fs) const;
 
   std::string filename;
   cv::Point globalShift;
 };
 
+void write(cv::FileStorage& fs, const std::string&, const inputImage& image);
+
+
 class registrationContext {
 public:
+  void write(cv::FileStorage& fs) const;
+
   std::vector<inputImage> images;
   cv::Rect crop = cv::Rect(0, 0, 0, 0);
   cv::Mat refimg;
   std::vector<imagePatch> patches;
 };
+
+void write(cv::FileStorage& fs,
+           const std::string&,
+           const registrationContext& context);
 
 #endif // REGISTRATIONCONTEXT_H
