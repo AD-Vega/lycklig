@@ -21,8 +21,7 @@
 
 #include "imageops.h"
 #include "registrationparams.h"
-
-class globalRegistrator;
+#include "registrationcontext.h"
 
 class globalRegistration {
 public:
@@ -39,9 +38,10 @@ public:
   globalRegistrator(const cv::Mat& reference, const int maxmove);
 
   // Parallelized static method that registers a set of images.
-  static globalRegistration getGlobalShifts(const cv::Mat& refimg,
-                                            const registrationParams& params,
-                                            bool showProgress);
+  static void getGlobalShifts(const registrationParams& params,
+                              registrationContext& context,
+                              const cv::Mat& refimg,
+                              bool showProgress);
 
 private:
   // Not thread safe.
@@ -49,9 +49,10 @@ private:
   // to call this method.
   cv::Point findShift(const cv::Mat& img);
 
-friend globalRegistration getGlobalShifts(const cv::Mat& refimg,
-                                          const registrationParams& params,
-                                          const bool showProgress);
+friend void getGlobalShifts(const registrationParams& params,
+                            registrationContext& context,
+                            const cv::Mat& refimg,
+                            const bool showProgress);
 
 private:
   cv::Mat1f refImgWithBorder;

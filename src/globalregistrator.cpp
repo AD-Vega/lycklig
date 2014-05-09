@@ -20,14 +20,6 @@
 
 using namespace cv;
 
-void globalRegistration::calculateOptimalCrop(const Size& size) {
-  crop = Rect(-shifts.at(0), size);
-  for (auto& shift : shifts) {
-        crop &= Rect(-shift, size);
-  }
-}
-
-
 globalRegistrator::globalRegistrator(const Mat& reference, const int maxmove) {
   refImgWithBorder = Mat::zeros(reference.rows + 2*maxmove, reference.cols + 2*maxmove, CV_32F);
   Rect imageRect = Rect(maxmove, maxmove, reference.cols, reference.rows);
@@ -51,35 +43,34 @@ Point globalRegistrator::findShift(const Mat& img)
 }
 
 
-globalRegistration globalRegistrator::getGlobalShifts(const Mat& refimg,
-                                                      const registrationParams& params,
-                                                      const bool showProgress) {
-  globalRegistration result;
-  result.shifts.resize(params.files.size());
+void globalRegistrator::getGlobalShifts(const registrationParams& params,
+                                        registrationContext& context,
+                                        const Mat& refimg,
+                                        const bool showProgress) {
   int progress = 0;
   if (showProgress)
-    std::fprintf(stderr, "0/%ld", params.files.size());
+    std::fprintf(stderr, "0/%ld", context.images.size());
   #pragma omp parallel
   {
     grayReader reader;
     globalRegistrator globalReg(refimg, params.prereg_maxmove);
     #pragma omp for schedule(dynamic)
-    for (int ifile = 0; ifile < (signed)params.files.size(); ifile++) {
-      Mat img(reader.read(params.files.at(ifile)));
-      Point shift = globalReg.findShift(img);
-      #pragma omp critical
-      result.shifts.at(ifile) = shift;
+    for (int ifile = 0; ifile < (signed)context.images.size(); ifile++) {
+      auto image = context.images.at(ifile);
+      Mat img(reader.read(image.filename));
+      image.globalShift = globalReg.findShift(img);
 
       if (showProgress) {
         #pragma omp critical
-        std::fprintf(stderr, "\r\033[K%d/%ld", ++progress, params.files.size());
+        std::fprintf(stderr, "\r\033[K%d/%ld", ++progress, context.images.size());
       }
     }
   }
   if (showProgress)
     std::fprintf(stderr, "\n");
 
-  result.calculateOptimalCrop(refimg.size());
-  result.valid = true;
-  return result;
+  context.crop = Rect(-context.images.at(0).globalShift, refimg.size());
+  for (auto& image : context.images) {
+        context.crop &= Rect(-image.globalShift, refimg.size());
+  }
 }

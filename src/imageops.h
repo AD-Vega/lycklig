@@ -26,6 +26,7 @@
 #include <Magick++.h>
 #include "imagepatch.h"
 #include "registrationparams.h"
+#include "registrationcontext.h"
 #include "rbfwarper.h"
 
 class globalRegistration;
@@ -83,7 +84,7 @@ void sRGB2linearRGB(cv::Mat& img);
 void linearRGB2sRGB(cv::Mat& img);
 
 cv::Mat meanimg(const registrationParams& params,
-                const globalRegistration& globalReg,
+                const registrationContext& context,
                 const bool showProgress = false);
 
 std::vector<imagePatch> selectPointsHex(const cv::Mat& img,
@@ -95,10 +96,9 @@ std::vector<imagePatch> filterPatchesByQuality(const std::vector<imagePatch>& pa
 cv::Mat drawPoints(const cv::Mat& img, const std::vector<imagePatch>& patches);
 
 cv::Mat lucky(const registrationParams& params,
-                const cv::Mat& refimg,
-                const globalRegistration& globalReg,
-                const std::vector<imagePatch>& patches,
-                const bool showProgress = false);
+              const registrationContext& context,
+              const cv::Mat& refimg,
+              const bool showProgress = false);
 
 cv::Mat normalizeTo16Bits(const cv::Mat& inputImg);
 

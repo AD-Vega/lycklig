@@ -26,6 +26,7 @@
 #include "globalregistrator.h"
 #include "rbfwarper.h"
 #include "registrationparams.h"
+#include "registrationcontext.h"
 
 using namespace cv;
 
@@ -36,20 +37,24 @@ int main(const int argc, const char *argv[]) {
 
   Magick::InitializeMagick(NULL);
 
-  std::cerr << params.files.size() << " input files listed\n";
+  registrationContext context;
+  context.images.reserve(params.files.size());
+  for (auto& file : params.files)
+    context.images.push_back(inputImage(file));
 
-  globalRegistration globalRegResult;
+  std::cerr << context.images.size() << " input files listed\n";
+
   if (params.prereg) {
     Mat globalRefimg(grayReader().read(params.prereg_img));
     if (params.prereg_maxmove == 0) {
       params.prereg_maxmove = std::min(globalRefimg.rows, globalRefimg.cols)/2;
     }
     std::cerr << "Pre-registering\n";
-    globalRegResult = globalRegistrator::getGlobalShifts(globalRefimg, params, true);
+    globalRegistrator::getGlobalShifts(params, context, globalRefimg, true);
   }
 
   std::cerr << "Creating a stacked reference image\n";
-  Mat rawRef = meanimg(params, globalRegResult, true);
+  Mat rawRef = meanimg(params, context, true);
   if (params.only_stack) {
     imwrite(params.output_file, normalizeTo16Bits(rawRef));
     return 0;
@@ -59,12 +64,12 @@ int main(const int argc, const char *argv[]) {
   cvtColor(refimg, refimg, CV_BGR2GRAY);
 
   std::cerr << "Lucky imaging: creating registration patches\n";
-  auto patches = selectPointsHex(refimg, params);
-  patches = filterPatchesByQuality(patches, refimg);
-  std::cerr << patches.size() << " valid patches\n";
+  context.patches = selectPointsHex(refimg, params);
+  context.patches = filterPatchesByQuality(context.patches, refimg);
+  std::cerr << context.patches.size() << " valid patches\n";
 
   std::cerr << "Lucky imaging: registration & warping\n";
-  Mat finalsum = lucky(params, refimg, globalRegResult, patches, true);
+  Mat finalsum = lucky(params, context, refimg, true);
 
   imwrite(params.output_file, normalizeTo16Bits(finalsum));
   return 0;

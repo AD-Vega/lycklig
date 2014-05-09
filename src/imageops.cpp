@@ -77,44 +77,47 @@ Mat grayReader::read(const string& file) {
 }
 
 Mat meanimg(const registrationParams& params,
-            const globalRegistration& globalReg,
+            const registrationContext& context,
             const bool showProgress) {
-  const auto& files = params.files;
-  Mat sample = magickImread(files.at(0));
+  const auto& images = context.images;
+  const bool globalRegValid = (context.crop.width > 0 && context.crop.height > 0);
+
+  Mat sample = magickImread(images.at(0).filename);
   Rect imgRect(Point(0, 0), sample.size());
+
   Mat imgmean;
-  if (params.crop && globalReg.valid)
-    imgmean = Mat::zeros(globalReg.crop.size(), CV_MAKETYPE(CV_32F, sample.channels()));
+  if (params.crop && globalRegValid)
+    imgmean = Mat::zeros(context.crop.size(), CV_MAKETYPE(CV_32F, sample.channels()));
   else
     imgmean = Mat::zeros(sample.size(), CV_MAKETYPE(CV_32F, sample.channels()));
 
   int progress = 0;
   if (showProgress)
-    std::fprintf(stderr, "0/%ld", files.size());
+    std::fprintf(stderr, "0/%ld", images.size());
   #pragma omp parallel
   {
     Mat localsum(imgmean.clone());
     #pragma omp barrier
     #pragma omp for
-    for (int i = 0; i < (signed)files.size(); i++) {
-      Mat img = magickImread(files.at(i));
+    for (int i = 0; i < (signed)images.size(); i++) {
+      auto image = images.at(i);
+      Mat data = magickImread(image.filename);
 
-      if (globalReg.valid) {
-        auto shift = globalReg.shifts.at(i);
+      if (globalRegValid) {
         if (params.crop)
-          accumulate(img(globalReg.crop + shift), localsum);
+          accumulate(data(context.crop + image.globalShift), localsum);
         else {
-          Rect sourceRoi = (imgRect + shift) & imgRect;
-          Rect destRoi = sourceRoi - shift;
-          accumulate(img(sourceRoi), localsum(destRoi));
+          Rect sourceRoi = (imgRect + image.globalShift) & imgRect;
+          Rect destRoi = sourceRoi - image.globalShift;
+          accumulate(data(sourceRoi), localsum(destRoi));
         }
       }
       else
-        accumulate(img, localsum);
+        accumulate(data, localsum);
 
       if (showProgress) {
         #pragma omp critical
-        std::fprintf(stderr, "\r\033[K%d/%ld", ++progress, files.size());
+        std::fprintf(stderr, "\r\033[K%d/%ld", ++progress, images.size());
       }
     }
     #pragma omp critical
@@ -122,7 +125,7 @@ Mat meanimg(const registrationParams& params,
   }
   if (showProgress)
     std::fprintf(stderr, "\n");
-  imgmean /= files.size();
+  imgmean /= images.size();
   return imgmean;
 }
 
@@ -342,38 +345,39 @@ Mat1f findShifts(const Mat& img,
 #include <iostream>
 
 Mat lucky(const registrationParams& params,
-            const Mat& refimg,
-            const globalRegistration& globalReg,
-            const std::vector<imagePatch>& patches,
-            const bool showProgress) {
-  rbfWarper rbf(patches, refimg.size(), params.boxsize/4, params.supersampling);
+          const registrationContext& context,
+          const Mat& refimg,
+          const bool showProgress) {
+  rbfWarper rbf(context.patches, refimg.size(), params.boxsize/4, params.supersampling);
   const float refimgsq = sum(refimg.mul(refimg))[0];
+  const bool globalRegValid = (context.crop.width > 0 && context.crop.height > 0);
+
   Mat finalsum;
-  if (params.crop && globalReg.valid)
-    finalsum = Mat::zeros(globalReg.crop.size() * params.supersampling, CV_32FC3);
+  if (params.crop && globalRegValid)
+    finalsum = Mat::zeros(context.crop.size() * params.supersampling, CV_32FC3);
   else
     finalsum = Mat::zeros(refimg.size() * params.supersampling, CV_32FC3);
 
   int progress = 0;
   if (showProgress)
-    std::fprintf(stderr, "0/%ld", params.files.size());
+    std::fprintf(stderr, "0/%ld", context.images.size());
   #pragma omp parallel
   {
     Mat localsum(Mat::zeros(refimg.size() * params.supersampling, CV_32FC3));
     patchMatcher matcher;
     #pragma omp for schedule(dynamic)
-    for (int ifile = 0; ifile < (signed)params.files.size(); ifile++) {
+    for (int ifile = 0; ifile < (signed)context.images.size(); ifile++) {
+      auto image = context.images.at(ifile);
       Mat imgcolor;
-      magickImread(params.files.at(ifile).c_str()).convertTo(imgcolor, CV_32F);
-      if (globalReg.valid) {
-        auto shift = globalReg.shifts.at(ifile);
+      magickImread(image.filename).convertTo(imgcolor, CV_32F);
+      if (globalRegValid) {
         if (params.crop)
-          imgcolor = imgcolor(globalReg.crop + shift);
+          imgcolor = imgcolor(context.crop + image.globalShift);
         else {
           Mat tmp = Mat::zeros(imgcolor.size(), imgcolor.type());
           Rect imgRect(Point(0, 0), imgcolor.size());
-          Rect sourceRoi = (imgRect + shift) & imgRect;
-          Rect destRoi = sourceRoi - shift;
+          Rect sourceRoi = (imgRect + image.globalShift) & imgRect;
+          Rect destRoi = sourceRoi - image.globalShift;
           imgcolor(sourceRoi).copyTo(tmp(destRoi));
           imgcolor = tmp;
         }
@@ -381,13 +385,13 @@ Mat lucky(const registrationParams& params,
       Mat1f img;
       cvtColor(imgcolor, img, CV_BGR2GRAY);
       const float multiplier = sum(img.mul(refimg))[0] / refimgsq;
-      Mat1f shifts(findShifts(img, patches, multiplier, matcher));
+      Mat1f shifts(findShifts(img, context.patches, multiplier, matcher));
       Mat imremap(rbf.warp(imgcolor, shifts));
       localsum += imremap;
 
       if (showProgress) {
         #pragma omp critical
-        std::fprintf(stderr, "\r\033[K%d/%ld", ++progress, params.files.size());
+        std::fprintf(stderr, "\r\033[K%d/%ld", ++progress, context.images.size());
       }
     }
     #pragma omp critical
