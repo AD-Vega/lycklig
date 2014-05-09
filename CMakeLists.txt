@@ -18,7 +18,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -O3")
 
 set_prefixed(lycklig_SRCS src/ cookedtemplate.cpp globalregistrator.cpp
-             imageops.cpp main.cpp rbfwarper.cpp registrationparams.cpp)
+             imageops.cpp imagepatch.cpp main.cpp rbfwarper.cpp registrationparams.cpp)
 add_executable(lycklig ${lycklig_SRCS})
 target_link_libraries(lycklig ${OpenCV_LIBS} ${PKGCONFS_LDFLAGS})
 

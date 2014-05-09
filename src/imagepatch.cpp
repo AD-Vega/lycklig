@@ -16,41 +16,33 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef IMAGEPATCH_H
-#define IMAGEPATCH_H
+#include "imagepatch.h"
 
-#include <opencv2/core/core.hpp>
-#include "cookedtemplate.h"
+imagePatchPosition::imagePatchPosition(int xpos, int ypos, cv::Rect search) :
+  x(xpos), y(ypos), searchArea(search) {}
 
-class imagePatchPosition {
-public:
-  imagePatchPosition(int xpos, int ypos, cv::Rect search);
-  void write(cv::FileStorage& fs) const;
 
-  unsigned int x;
-  unsigned int y;
-  cv::Rect searchArea;
-};
+void imagePatchPosition::write(cv::FileStorage& fs) const {
+  fs << "{"
+     << "x" << static_cast<int>(x)
+     << "y" << static_cast<int>(y)
+     << "searchArea" << searchArea
+     << "}";
+}
+
 
 void write(cv::FileStorage& fs,
            const std::string&,
-           const imagePatchPosition& patch);
+           const imagePatchPosition& patch) {
+  patch.write(fs);
+}
 
 
-class imagePatch : public imagePatchPosition {
-public:
-  imagePatch(cv::Mat img, imagePatchPosition position);
-  imagePatch(cv::Mat img, int xpos, int ypos, cv::Rect search);
+imagePatch::imagePatch(cv::Mat img, imagePatchPosition position) :
+  imagePatchPosition(position), image(img),
+  sqsum(sum(img.mul(img))[0]), cookedTmpl(img, position.searchArea.size()),
+  cookedMask(cv::Mat::ones(img.size(), CV_32F), position.searchArea.size()) {}
 
-  inline int xcenter() const { return x + image.cols/2; }
-  inline int ycenter() const { return y + image.rows/2; }
-  inline int matchShiftx() const { return x - searchArea.x; }
-  inline int matchShifty() const { return y - searchArea.y; }
 
-  cv::Mat image;
-  double sqsum;
-  cookedTemplate cookedTmpl;
-  cookedTemplate cookedMask;
-};
-
-#endif // IMAGEPATCH_H
+imagePatch::imagePatch(cv::Mat img, int xpos, int ypos, cv::Rect search) :
+  imagePatch(img, imagePatchPosition(xpos, ypos, search)) {}

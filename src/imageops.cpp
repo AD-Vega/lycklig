@@ -156,7 +156,7 @@ std::vector<imagePatch> selectPointsHex(const Mat& img,
          x += xydiff) {
       Mat roi(img, Rect(x, y, boxsize, boxsize));
       Rect searchArea(Point(x-maxmb, y-maxmb), Point(x+boxsize+maxmb, y+boxsize+maxmb));
-      imagePatch p(x, y, roi, searchArea);
+      imagePatch p(roi, x, y, searchArea);
       patches.push_back(p);
     }
   }
