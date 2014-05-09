@@ -367,7 +367,7 @@ Mat lucky(const registrationParams& params,
     patchMatcher matcher;
     #pragma omp for schedule(dynamic)
     for (int ifile = 0; ifile < (signed)context.images.size(); ifile++) {
-      auto image = context.images.at(ifile);
+      const auto& image = context.images.at(ifile);
       Mat imgcolor;
       magickImread(image.filename).convertTo(imgcolor, CV_32F);
       if (globalRegValid) {

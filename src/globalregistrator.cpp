@@ -56,7 +56,7 @@ void globalRegistrator::getGlobalShifts(const registrationParams& params,
     globalRegistrator globalReg(refimg, params.prereg_maxmove);
     #pragma omp for schedule(dynamic)
     for (int ifile = 0; ifile < (signed)context.images.size(); ifile++) {
-      auto image = context.images.at(ifile);
+      auto& image = context.images.at(ifile);
       Mat img(reader.read(image.filename));
       image.globalShift = globalReg.findShift(img);
 
