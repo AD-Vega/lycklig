@@ -27,6 +27,7 @@
 class inputImage {
 public:
   inputImage(std::string filename_);
+  inputImage(const cv::FileNode& node);
   void write(cv::FileStorage& fs) const;
 
   std::string filename;
@@ -38,8 +39,11 @@ void write(cv::FileStorage& fs, const std::string&, const inputImage& image);
 
 class registrationContext {
 public:
+  registrationContext() = default;
+  registrationContext(const cv::FileStorage& fs);
   void write(cv::FileStorage& fs) const;
 
+  int boxsize = 0;
   std::vector<inputImage> images;
   cv::Rect crop = cv::Rect(0, 0, 0, 0);
   cv::Mat refimg;

@@ -23,6 +23,12 @@ inputImage::inputImage(std::string filename_) :
 {}
 
 
+inputImage::inputImage(const cv::FileNode& node) {
+  node["filename"] >> filename;
+  node["globalShift"] >> globalShift;
+}
+
+
 void inputImage::write(cv::FileStorage& fs) const {
   fs << "{"
      << "filename" << filename
@@ -33,6 +39,19 @@ void inputImage::write(cv::FileStorage& fs) const {
 
 void write(cv::FileStorage& fs, const std::string&, const inputImage& image) {
   image.write(fs);
+}
+
+
+registrationContext::registrationContext(const cv::FileStorage& fs) {
+  fs["boxsize"] >> boxsize;
+  fs["crop"] >> crop;
+  fs["refimg"] >> refimg;
+
+  for (const auto& i : fs["images"])
+    images.push_back(inputImage(i));
+
+  for (const auto& i : fs["patches"])
+    patches.push_back(imagePatch(refimg, imagePatchPosition(i), boxsize));
 }
 
 
@@ -55,7 +74,8 @@ void write(cv::FileStorage& fs,
 }
 
 void registrationContext::write(cv::FileStorage& fs) const {
-  fs << "images" << images
+  fs << "boxsize" << boxsize
+     << "images" << images
      << "crop" << crop
      << "patches" << patches
      << "refimg" << refimg;

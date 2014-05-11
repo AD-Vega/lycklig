@@ -22,6 +22,16 @@ imagePatchPosition::imagePatchPosition(int xpos, int ypos, cv::Rect search) :
   x(xpos), y(ypos), searchArea(search) {}
 
 
+imagePatchPosition::imagePatchPosition(const cv::FileNode& node) {
+  int xpos, ypos;
+  node["x"] >> xpos;
+  node["y"] >> ypos;
+  x = xpos;
+  y = ypos;
+  node["searchArea"] >> searchArea;
+}
+
+
 void imagePatchPosition::write(cv::FileStorage& fs) const {
   fs << "{"
      << "x" << static_cast<int>(x)
@@ -38,11 +48,12 @@ void write(cv::FileStorage& fs,
 }
 
 
-imagePatch::imagePatch(cv::Mat img, imagePatchPosition position) :
-  imagePatchPosition(position), image(img),
-  sqsum(sum(img.mul(img))[0]), cookedTmpl(img, position.searchArea.size()),
-  cookedMask(cv::Mat::ones(img.size(), CV_32F), position.searchArea.size()) {}
+imagePatch::imagePatch(cv::Mat img, imagePatchPosition position, int boxsize) :
+  imagePatchPosition(position),
+  image(img(cv::Rect((int)position.x, (int)position.y, boxsize, boxsize))),
+  sqsum(sum(image.mul(image))[0]), cookedTmpl(image, position.searchArea.size()),
+  cookedMask(cv::Mat::ones(image.size(), CV_32F), position.searchArea.size()) {}
 
 
-imagePatch::imagePatch(cv::Mat img, int xpos, int ypos, cv::Rect search) :
-  imagePatch(img, imagePatchPosition(xpos, ypos, search)) {}
+imagePatch::imagePatch(cv::Mat img, int xpos, int ypos, int boxsize, cv::Rect search) :
+  imagePatch(img, imagePatchPosition(xpos, ypos, search), boxsize) {}

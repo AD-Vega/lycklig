@@ -25,6 +25,7 @@
 class imagePatchPosition {
 public:
   imagePatchPosition(int xpos, int ypos, cv::Rect search);
+  imagePatchPosition(const cv::FileNode& node);
   void write(cv::FileStorage& fs) const;
 
   unsigned int x;
@@ -39,8 +40,8 @@ void write(cv::FileStorage& fs,
 
 class imagePatch : public imagePatchPosition {
 public:
-  imagePatch(cv::Mat img, imagePatchPosition position);
-  imagePatch(cv::Mat img, int xpos, int ypos, cv::Rect search);
+  imagePatch(cv::Mat img, imagePatchPosition position, int boxsize);
+  imagePatch(cv::Mat img, int xpos, int ypos, int boxsize, cv::Rect search);
 
   inline int xcenter() const { return x + image.cols/2; }
   inline int ycenter() const { return y + image.rows/2; }
