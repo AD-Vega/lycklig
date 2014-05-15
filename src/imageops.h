@@ -96,7 +96,7 @@ std::vector<imagePatch> filterPatchesByQuality(const std::vector<imagePatch>& pa
 cv::Mat drawPoints(const cv::Mat& img, const std::vector<imagePatch>& patches);
 
 cv::Mat lucky(const registrationParams& params,
-              const registrationContext& context,
+              registrationContext& context,
               const bool showProgress = false);
 
 cv::Mat normalizeTo16Bits(const cv::Mat& inputImg);

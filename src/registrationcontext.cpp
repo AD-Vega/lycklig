@@ -69,6 +69,15 @@ registrationContext::registrationContext(const cv::FileStorage& fs) {
       priv_patches.push_back(imagePatch(priv_refimg, imagePatchPosition(i), priv_boxsize));
     patches_valid = true;
   }
+
+  if (fs["shifts"].isSeq()) {
+    for (const auto& i : fs["shifts"]) {
+      cv::Mat1f shifts;
+      i >> shifts;
+      priv_shifts.push_back(shifts);
+    }
+    shifts_valid = true;
+  }
 }
 
 void registrationContext::boxsize(int new_boxsize) {
@@ -94,6 +103,12 @@ void registrationContext::refimg(cv::Mat& new_refimg) {
 void registrationContext::patches(std::vector<imagePatch>& new_patches) {
   priv_patches = new_patches;
   patches_valid = true;
+}
+
+void registrationContext::shifts(std::vector< cv::Mat1f >& new_shifts)
+{
+  priv_shifts = new_shifts;
+  shifts_valid = true;
 }
 
 
@@ -126,6 +141,8 @@ void registrationContext::write(cv::FileStorage& fs) const {
     fs << "patches" << priv_patches;
   if (refimg_valid)
     fs << "refimg" << priv_refimg;
+  if (shifts_valid)
+    fs << "shifts" << priv_shifts;
 }
 
 void write(cv::FileStorage& fs,

@@ -50,6 +50,7 @@ public:
   inline cv::Rect crop() const { return priv_crop; }
   inline const cv::Mat& refimg() const { return priv_refimg; }
   inline const std::vector<imagePatch>& patches() const { return priv_patches; }
+  inline const std::vector<cv::Mat1f>& shifts() const { return priv_shifts; }
 
   // modificators
   void boxsize(int new_boxsize);
@@ -57,6 +58,7 @@ public:
   void crop(cv::Rect new_crop);
   void refimg(cv::Mat& new_refimg);
   void patches(std::vector<imagePatch>& new_patches);
+  void shifts(std::vector<cv::Mat1f>& new_shifts);
 
   // checks
   inline bool boxsizeValid() const { return boxsize_valid; }
@@ -64,6 +66,7 @@ public:
   inline bool cropValid() const { return crop_valid; }
   inline bool refimgValid() const { return refimg_valid; }
   inline bool patchesValid() const { return patches_valid; }
+  inline bool shiftsValid() const { return shifts_valid; }
 
 private:
   int priv_boxsize = 0;
@@ -80,6 +83,9 @@ private:
 
   std::vector<imagePatch> priv_patches;
   bool patches_valid = false;
+
+  std::vector<cv::Mat1f> priv_shifts;
+  bool shifts_valid = false;
 };
 
 void write(cv::FileStorage& fs,

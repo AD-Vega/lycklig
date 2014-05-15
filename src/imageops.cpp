@@ -344,7 +344,7 @@ Mat1f findShifts(const Mat& img,
 #include <iostream>
 
 Mat lucky(const registrationParams& params,
-          const registrationContext& context,
+          registrationContext& context,
           const bool showProgress) {
   const auto& refimg = context.refimg();
   rbfWarper rbf(context.patches(), refimg.size(), params.boxsize/4, params.supersampling);
@@ -356,6 +356,8 @@ Mat lucky(const registrationParams& params,
     finalsum = Mat::zeros(context.crop().size() * params.supersampling, CV_32FC3);
   else
     finalsum = Mat::zeros(refimg.size() * params.supersampling, CV_32FC3);
+
+  std::vector<Mat1f> allShifts(context.images().size());
 
   int progress = 0;
   if (showProgress)
@@ -385,6 +387,7 @@ Mat lucky(const registrationParams& params,
       cvtColor(imgcolor, img, CV_BGR2GRAY);
       const float multiplier = sum(img.mul(refimg))[0] / refimgsq;
       Mat1f shifts(findShifts(img, context.patches(), multiplier, matcher));
+      allShifts.at(ifile) = shifts;
       Mat imremap(rbf.warp(imgcolor, shifts));
       localsum += imremap;
 
@@ -399,6 +402,7 @@ Mat lucky(const registrationParams& params,
   if (showProgress)
     std::fprintf(stderr, "\n");
 
+  context.shifts(allShifts);
   return finalsum;
 }
 
