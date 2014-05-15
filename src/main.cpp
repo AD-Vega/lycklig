@@ -100,7 +100,15 @@ int main(const int argc, const char *argv[]) {
   }
 
   if (params.stage_lucky || params.stage_stack) {
-    std::cerr << "Lucky imaging: registration & warping\n";
+    if (params.stage_lucky && params.stage_stack)
+      std::cerr << "Lucky imaging: registration, warping and stacking\n";
+    else if (params.stage_lucky)
+      std::cerr << "Lucky imaging: registration\n";
+    else if (params.stage_stack && context.shiftsValid())
+      std::cerr << "Stacking images (using data from lucky imaging)\n";
+    else if (params.stage_stack)
+      std::cerr << "Stacking images (no lucky imaging)\n";
+
     Mat finalsum = lucky(params, context, true);
     // Only save the result if there is something to save.
     if (params.stage_stack)

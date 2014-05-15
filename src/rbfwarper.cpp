@@ -30,6 +30,9 @@ rbfWarper::rbfWarper(const vector<imagePatch>& patches_,
   bases(patches.size()), coeffs(patches.size(), patches.size()),
   xshiftbase(imagesize), yshiftbase(imagesize) {
 
+  if (patches.empty())
+    return;
+
   prepareBases();
   prepareCoeffs();
   for (int y = 0; y < imagesize.height; y++) {

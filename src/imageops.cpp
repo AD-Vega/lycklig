@@ -340,32 +340,64 @@ Mat1f findShifts(const Mat& img,
   return shifts;
 }
 
-#include <iostream>
 
+// Lucky imaging + stacking.
+//
+// These are, in principle, two separate operations. However, to minimize the
+// number of needed image reads (and conversions), they are performed in a
+// single parallelized loop. Parts of the loop specific to lucky imaging or
+// stacking are in conditionals to allow the user to request only one operation
+// to be performed.
+//
 Mat lucky(const registrationParams& params,
           registrationContext& context,
           const bool showProgress) {
+  // LUCKY IMAGING: initialization
+  // These initializations are relatively cheap and can be performed even
+  // if we are only going to do stacking.
   const auto& refimg = context.refimg();
-  rbfWarper rbf(context.patches(), refimg.size(), context.boxsize()/4, params.supersampling);
   const float refimgsq = sum(refimg.mul(refimg))[0];
+  // rbfWarper can be harmlessly constructed with an empty patch list, but
+  // should then not be used.
+  rbfWarper rbf(context.patches(), refimg.size(), context.boxsize()/4, params.supersampling);
 
+  std::vector<Mat1f> allShifts;
+  if (params.stage_lucky) {
+    // Shifts will be computed during this run.
+    allShifts.resize(context.images().size());
+  }
+  else if (params.stage_stack && context.shiftsValid()) {
+    // Use shifts from a state file, if they are available.
+    allShifts = context.shifts();
+  }
+
+  // STACKING: initialization
   Mat finalsum;
-  if (params.crop && context.cropValid())
-    finalsum = Mat::zeros(context.crop().size() * params.supersampling, CV_32FC3);
-  else
-    finalsum = Mat::zeros(refimg.size() * params.supersampling, CV_32FC3);
-
-  std::vector<Mat1f> allShifts(context.images().size());
+  if (params.stage_stack) {
+    if (params.crop && context.cropValid())
+      finalsum = Mat::zeros(context.crop().size() * params.supersampling, CV_32FC3);
+    else {
+      Mat sample = magickImread(context.images().at(0).filename);
+      finalsum = Mat::zeros(sample.size() * params.supersampling, CV_32FC3);
+    }
+  }
 
   int progress = 0;
   if (showProgress)
     std::fprintf(stderr, "0/%ld", context.images().size());
   #pragma omp parallel
   {
-    Mat localsum(Mat::zeros(refimg.size() * params.supersampling, CV_32FC3));
+    // LUCKY IMAGING: local initialization
     patchMatcher matcher;
+    // STACKING: local initialization
+    Mat localsum;
+    if (params.stage_stack)
+      localsum = Mat::zeros(finalsum.size(), CV_32FC3);
+
+    // PARALLELIZED LOOP
     #pragma omp for schedule(dynamic)
     for (int ifile = 0; ifile < (signed)context.images().size(); ifile++) {
+      // common step: load an image
       const auto& image = context.images().at(ifile);
       Mat imgcolor;
       magickImread(image.filename).convertTo(imgcolor, CV_32F);
@@ -381,26 +413,49 @@ Mat lucky(const registrationParams& params,
           imgcolor = tmp;
         }
       }
-      Mat1f img;
-      cvtColor(imgcolor, img, CV_BGR2GRAY);
-      const float multiplier = sum(img.mul(refimg))[0] / refimgsq;
-      Mat1f shifts(findShifts(img, context.patches(), multiplier, matcher));
-      allShifts.at(ifile) = shifts;
-      Mat imremap(rbf.warp(imgcolor, shifts));
-      localsum += imremap;
 
+      // LUCKY IMAGING: main operation
+      if (params.stage_lucky) {
+        Mat1f img;
+        cvtColor(imgcolor, img, CV_BGR2GRAY);
+        const float multiplier = sum(img.mul(refimg))[0] / refimgsq;
+        Mat1f shifts(findShifts(img, context.patches(), multiplier, matcher));
+        allShifts.at(ifile) = shifts;
+      }
+
+      // STACKING: main operation
+      if (params.stage_stack) {
+        if (params.stage_lucky || context.shiftsValid())
+          localsum += rbf.warp(imgcolor, allShifts.at(ifile));
+        else
+          // FIXME: this does not work with supersampling yet. For that to work,
+          // an interpolator is needed that will handle both global registration
+          // shifts and lucky imaging.
+          localsum += imgcolor;
+      }
+
+      // progress indication
       if (showProgress) {
         #pragma omp critical
         std::fprintf(stderr, "\r\033[K%d/%ld", ++progress, context.images().size());
       }
+    } // end of loop
+
+    // STACKING: final sum
+    if (params.stage_stack) {
+      #pragma omp critical
+      finalsum += localsum;
     }
-    #pragma omp critical
-    finalsum += localsum;
   }
   if (showProgress)
     std::fprintf(stderr, "\n");
 
-  context.shifts(allShifts);
+  // LUCKY IMAGING: pass the results to registrationContext
+  if (params.stage_lucky)
+    context.shifts(allShifts);
+
+  // This is only going to return something meaningful if we performed
+  // stacking; otherwise, an empty image will be returned.
   return finalsum;
 }
 
