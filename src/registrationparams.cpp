@@ -43,62 +43,133 @@ bool registrationParams::parse(const int argc, const char* argv[])
   try
   {
     TCLAP::CmdLine cmd("Registration of planetary images");
+
+    // pre-registration
     TCLAP::ValueArg<std::string> arg_prereg_img(
       "p", "prereg-img", "Preregister using this image as the reference.", false, "", "filename");
     cmd.add(arg_prereg_img);
-    TCLAP::SwitchArg arg_prereg_first(
-      "1", "prereg-first", "Preregister using the first image as the reference.", false);
-    cmd.add(arg_prereg_first);
+    TCLAP::SwitchArg arg_prereg_on_first(
+      "1", "prereg-on-first", "Preregister using the first image as the reference.", false);
+    cmd.add(arg_prereg_on_first);
     TCLAP::ValueArg<unsigned int> arg_prereg_maxmove(
       "x", "prereg-maxmove", "Maximum displacement in pre-registering. Zero means half "
                              "of the images' smallest size; this is also the default.",
                              false, prereg_maxmove, "pixels");
     cmd.add(arg_prereg_maxmove);
-    TCLAP::SwitchArg arg_only_stack(
-      "n", "only-stack", "Don't do lucky imaging: only stack (possibly pre-registered) images.", false);
-    cmd.add(arg_only_stack);
+
+    // reference image + registration points
+    TCLAP::SwitchArg arg_refimg(
+      "r", "refimg", "Create a reference image to be used as a template for lucky imaging.", stage_refimg);
+    cmd.add(arg_refimg);
+    TCLAP::SwitchArg arg_only_refimg(
+      "n", "only-refimg", "Only roughly stack (possibly pre-registered) images (implies --refimg).", only_refimg);
+    cmd.add(arg_only_refimg);
     TCLAP::SwitchArg arg_crop(
       "c", "crop", "Crop the image to the area common to all input images "
-                   "(only effective with pre-registration; a no-op otherwise).", false);
+                   "(only effective with pre-registration; a no-op otherwise).", crop);
     cmd.add(arg_crop);
     TCLAP::ValueArg<unsigned int> arg_boxsize(
       "b", "boxsize", "Box size " + defval(boxsize), false, boxsize, "pixels");
     cmd.add(arg_boxsize);
+
+    // lucky imaging
+    TCLAP::SwitchArg arg_lucky(
+      "l", "lucky", "Lucky imaging.", stage_lucky);
+    cmd.add(arg_lucky);
     TCLAP::ValueArg<unsigned int> arg_maxmove(
-      "m", "maxmove", "Maximum displacement " + defval(maxmove), false, maxmove, "pixels");
+      "m", "maxmove", "Maximum displacement in lucky imaging " + defval(maxmove), false, maxmove, "pixels");
     cmd.add(arg_maxmove);
+
+    // interpolation + stacking
+    TCLAP::SwitchArg arg_stack(
+      "t", "stack", "Stack (sum) the resulting images", stage_stack);
+    cmd.add(arg_stack);
     TCLAP::ValueArg<unsigned int> arg_supersampling(
       "s", "super", "Supersampling " + defval(supersampling), false, supersampling, "N");
     cmd.add(arg_supersampling);
-    TCLAP::ValueArg<std::string> arg_output_file(
-      "o", "output", "Output file", true, "", "filename");
-    cmd.add(arg_output_file);
+
+    // input options
+    TCLAP::ValueArg<std::string> arg_read_state(
+      "i", "read-state", "Continue processing from a saved state", false, "", "filename.yml");
+    cmd.add(arg_read_state);
     TCLAP::UnlabeledMultiArg<std::string> arg_files(
-      "files", "Image files to process", true, "files");
+      "files", "Image files to process", false, "files");
     cmd.add(arg_files);
+
+    // output options
+    TCLAP::ValueArg<std::string> arg_save_state(
+      "w", "save-state", "Save the registration state into a file", false, "", "filename.yml");
+    cmd.add(arg_save_state);
+    TCLAP::ValueArg<std::string> arg_output_file(
+      "o", "output", "Output file", false, "", "filename");
+    cmd.add(arg_output_file);
 
     cmd.parse(argc, argv);
 
-    boxsize = arg_boxsize.getValue();
-    maxmove = arg_maxmove.getValue();
-    supersampling = arg_supersampling.getValue();
-    output_file = arg_output_file.getValue();
-    files = arg_files.getValue();
-    only_stack = arg_only_stack.isSet();
-    crop = arg_crop.isSet();
-
-    if (arg_prereg_img.isSet() + arg_prereg_first.isSet() > 1) {
-      std::cerr << "PARSE ERROR: arguments --prereg-img and --prereg-first\n"
-                << "             are mutually exclusive!" << std::endl;
+    // stages
+    if (arg_prereg_img.isSet() + arg_prereg_on_first.isSet() > 1) {
+      std::cerr << "ERROR: arguments --prereg-img and --prereg-first are\n"
+                << "       mutually exclusive!" << std::endl;
       return false;
     }
     if (arg_prereg_img.isSet()) {
-      prereg = true;
+      stage_prereg = true;
       prereg_img = arg_prereg_img.getValue();
     }
-    else if (arg_prereg_first.isSet()) {
-      prereg = true;
-      prereg_img = files.at(0);
+    else if (arg_prereg_on_first.isSet()) {
+      stage_prereg = true;
+    }
+    stage_refimg = arg_refimg.isSet();
+    stage_lucky = arg_lucky.isSet();
+    stage_stack = arg_stack.isSet();
+
+    // options
+    only_refimg = arg_only_refimg.isSet();
+    if (only_refimg) {
+      if (stage_stack) {
+        std::cerr << "ERROR: --only-refimg and --stack can not be enabled at the same time." << std::endl;
+        return false;
+      }
+      stage_refimg = true;
+    }
+
+    boxsize = arg_boxsize.getValue();
+    crop = arg_crop.isSet();
+    maxmove = arg_maxmove.getValue();
+    supersampling = arg_supersampling.getValue();
+
+    if (arg_read_state.isSet() && arg_files.isSet()) {
+      std::cerr << "ERROR: you can either use --read-state OR list input files." << std::endl;
+      return false;
+    }
+    if (arg_read_state.isSet()) {
+      read_state_file = arg_read_state.getValue();
+      if (read_state_file.length() >= 4 &&
+          std::string(read_state_file.cend()-4, read_state_file.cend()) != ".yml") {
+        std::cerr << "ERROR: --read-state requires a file name ending in '.yml'\n"
+                     "       (sorry - an OpenCV peculiarity; can't do much about that)\n";
+        return false;
+      }
+    }
+    else
+      files = arg_files.getValue();
+
+    if (arg_save_state.isSet()) {
+      save_state_file = arg_save_state.getValue();
+      if (save_state_file.length() >= 4 &&
+          std::string(save_state_file.cend()-4, save_state_file.cend()) != ".yml") {
+        std::cerr << "ERROR: --save-state requires a file name ending in '.yml'\n"
+                     "       (sorry - an OpenCV peculiarity; can't do much about that)\n";
+        return false;
+      }
+    }
+
+    if (arg_output_file.isSet()) {
+      if (! (only_refimg || stage_stack)) {
+        std::cerr << "ERROR: --output file given but no image-producing stages are enabled" << std::endl;
+        return false;
+      }
+      output_file = arg_output_file.getValue();
     }
   }
   catch (TCLAP::ArgException &e)

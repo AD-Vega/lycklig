@@ -27,16 +27,33 @@ class registrationParams
 public:
   bool parse(const int argc, const char *argv[]);
 
-  bool prereg = false;
+  bool stage_prereg = false;
+  bool stage_refimg = false;
+  bool stage_lucky = false;
+  bool stage_stack = false;
+
+  // global registration
   std::string prereg_img;
   unsigned int prereg_maxmove = 0;
-  bool only_stack = false;
+
+  // reference image + registration points
+  bool only_refimg = false;
   bool crop = false;
   unsigned int boxsize = 60;
+
+  // lucky imaging
   unsigned int maxmove = 20;
+
+  // interpolation + stacking
   int supersampling = 1;
-  std::string output_file;
+
+  // input options
+  std::string read_state_file;
   std::vector<std::string> files;
+
+  // output options
+  std::string save_state_file;
+  std::string output_file;
 };
 
 #endif // REGISTRATIONPARAMS_H

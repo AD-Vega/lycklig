@@ -80,13 +80,12 @@ Mat meanimg(const registrationParams& params,
             const registrationContext& context,
             const bool showProgress) {
   const auto& images = context.images();
-  const bool globalRegValid = (context.crop().width > 0 && context.crop().height > 0);
 
   Mat sample = magickImread(images.at(0).filename);
   Rect imgRect(Point(0, 0), sample.size());
 
   Mat imgmean;
-  if (params.crop && globalRegValid)
+  if (params.crop && context.cropValid())
     imgmean = Mat::zeros(context.crop().size(), CV_MAKETYPE(CV_32F, sample.channels()));
   else
     imgmean = Mat::zeros(sample.size(), CV_MAKETYPE(CV_32F, sample.channels()));
@@ -103,7 +102,7 @@ Mat meanimg(const registrationParams& params,
       auto image = images.at(i);
       Mat data = magickImread(image.filename);
 
-      if (globalRegValid) {
+      if (context.cropValid()) {
         if (params.crop)
           accumulate(data(context.crop() + image.globalShift), localsum);
         else {
@@ -134,7 +133,7 @@ std::vector<imagePatch> selectPointsHex(const registrationParams& params,
   const auto& refimg = context.refimg();
   std::vector<imagePatch> patches;
   Rect imgrect(Point(0, 0), refimg.size());
-  const int boxsize = params.boxsize;
+  const int boxsize = context.boxsize();
 
   // We set maximum displacement to maxmove+1: the 1px border is used as a
   // "safety zone" (detecting maximum displacement in at least one direction
@@ -347,12 +346,11 @@ Mat lucky(const registrationParams& params,
           registrationContext& context,
           const bool showProgress) {
   const auto& refimg = context.refimg();
-  rbfWarper rbf(context.patches(), refimg.size(), params.boxsize/4, params.supersampling);
+  rbfWarper rbf(context.patches(), refimg.size(), context.boxsize()/4, params.supersampling);
   const float refimgsq = sum(refimg.mul(refimg))[0];
-  const bool globalRegValid = (context.crop().width > 0 && context.crop().height > 0);
 
   Mat finalsum;
-  if (params.crop && globalRegValid)
+  if (params.crop && context.cropValid())
     finalsum = Mat::zeros(context.crop().size() * params.supersampling, CV_32FC3);
   else
     finalsum = Mat::zeros(refimg.size() * params.supersampling, CV_32FC3);
@@ -371,7 +369,7 @@ Mat lucky(const registrationParams& params,
       const auto& image = context.images().at(ifile);
       Mat imgcolor;
       magickImread(image.filename).convertTo(imgcolor, CV_32F);
-      if (globalRegValid) {
+      if (context.cropValid()) {
         if (params.crop)
           imgcolor = imgcolor(context.crop() + image.globalShift);
         else {

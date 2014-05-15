@@ -31,20 +31,39 @@
 using namespace cv;
 
 int main(const int argc, const char *argv[]) {
+  // Parse command line parameters.
   registrationParams params;
   if (!params.parse(argc, argv))
     return 1;
 
+  // This should be called in order for OpenMP parallelization to work with
+  // ImageMagick.
   Magick::InitializeMagick(NULL);
 
   registrationContext context;
-  context.images().reserve(params.files.size());
-  for (auto& file : params.files)
-    context.images().push_back(inputImage(file));
 
-  std::cerr << context.images().size() << " input files listed\n";
+  // Load a state file if one was supplied.
+  if (!params.read_state_file.empty()) {
+    std::cerr << "Reading state from '" << params.read_state_file << "'\n";
+    FileStorage readStateFS(params.read_state_file, FileStorage::READ);
+    context = registrationContext(readStateFS);
+    std::cerr << context.images().size() << " input files read from state file\n";
+  }
+  else {
+    // No state file - we are starting from scratch. Initialize registration
+    // context from command line parameters.
+    context.boxsize(params.boxsize);
+    std::vector<inputImage> images;
+    for (auto& file : params.files)
+      images.push_back(inputImage(file));
+    context.images(images);
+    std::cerr << context.images().size() << " input files listed on command line\n";
+  }
 
-  if (params.prereg) {
+  // preregistration stage
+  if (params.stage_prereg) {
+    if (params.prereg_img.empty())
+      params.prereg_img = context.images().at(0).filename;
     Mat globalRefimg(grayReader().read(params.prereg_img));
     if (params.prereg_maxmove == 0) {
       params.prereg_maxmove = std::min(globalRefimg.rows, globalRefimg.cols)/2;
@@ -53,26 +72,46 @@ int main(const int argc, const char *argv[]) {
     globalRegistrator::getGlobalShifts(params, context, globalRefimg, true);
   }
 
-  std::cerr << "Creating a stacked reference image\n";
-  Mat rawRef = meanimg(params, context, true);
-  if (params.only_stack) {
-    imwrite(params.output_file, normalizeTo16Bits(rawRef));
-    return 0;
+  // If we are going to do lucky imaging, we need a reference image. If there
+  // was none in the state file, we need to make one now.
+  if (params.stage_lucky && !context.refimgValid())
+    params.stage_refimg = true;
+
+  // reference image + possibly registration patches
+  if (params.stage_refimg) {
+    std::cerr << "Creating a stacked reference image\n";
+    Mat rawRef = meanimg(params, context, true);
+
+    if (params.only_refimg)
+      imwrite(params.output_file, normalizeTo16Bits(rawRef));
+    else {
+      Mat refimg;
+      rawRef.convertTo(refimg, CV_32F);
+      cvtColor(refimg, refimg, CV_BGR2GRAY);
+      context.refimg(refimg);
+
+      // create registration patches
+      std::cerr << "Lucky imaging: creating registration patches\n";
+      auto patches = selectPointsHex(params, context);
+      patches = filterPatchesByQuality(patches, context.refimg());
+      context.patches(patches);
+      std::cerr << context.patches().size() << " valid patches\n";
+    }
   }
-  Mat refimg;
-  rawRef.convertTo(refimg, CV_32F);
-  cvtColor(refimg, refimg, CV_BGR2GRAY);
-  context.refimg(refimg);
 
-  std::cerr << "Lucky imaging: creating registration patches\n";
-  auto patches = selectPointsHex(params, context);
-  patches = filterPatchesByQuality(patches, context.refimg());
-  context.patches(patches);
-  std::cerr << context.patches().size() << " valid patches\n";
+  if (params.stage_lucky || params.stage_stack) {
+    std::cerr << "Lucky imaging: registration & warping\n";
+    Mat finalsum = lucky(params, context, true);
+    // Only save the result if there is something to save.
+    if (params.stage_stack)
+      imwrite(params.output_file, normalizeTo16Bits(finalsum));
+  }
 
-  std::cerr << "Lucky imaging: registration & warping\n";
-  Mat finalsum = lucky(params, context, true);
+  if (!params.save_state_file.empty()) {
+    std::cerr << "Saving state to '" << params.save_state_file << "'\n";
+    FileStorage saveStateFS(params.save_state_file, FileStorage::WRITE);
+    context.write(saveStateFS);
+  }
 
-  imwrite(params.output_file, normalizeTo16Bits(finalsum));
   return 0;
 }
