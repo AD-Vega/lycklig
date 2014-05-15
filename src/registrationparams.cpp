@@ -171,6 +171,10 @@ bool registrationParams::parse(const int argc, const char* argv[])
       }
       output_file = arg_output_file.getValue();
     }
+    else if (!arg_save_state.isSet()) {
+      std::cerr << "ERROR: refusing to discard data. Use --output or --save-state !" << std::endl;
+      return false;
+    }
   }
   catch (TCLAP::ArgException &e)
   {
