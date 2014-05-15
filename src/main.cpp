@@ -38,11 +38,11 @@ int main(const int argc, const char *argv[]) {
   Magick::InitializeMagick(NULL);
 
   registrationContext context;
-  context.images.reserve(params.files.size());
+  context.images().reserve(params.files.size());
   for (auto& file : params.files)
-    context.images.push_back(inputImage(file));
+    context.images().push_back(inputImage(file));
 
-  std::cerr << context.images.size() << " input files listed\n";
+  std::cerr << context.images().size() << " input files listed\n";
 
   if (params.prereg) {
     Mat globalRefimg(grayReader().read(params.prereg_img));
@@ -62,12 +62,13 @@ int main(const int argc, const char *argv[]) {
   Mat refimg;
   rawRef.convertTo(refimg, CV_32F);
   cvtColor(refimg, refimg, CV_BGR2GRAY);
-  context.refimg = refimg;
+  context.refimg(refimg);
 
   std::cerr << "Lucky imaging: creating registration patches\n";
   auto patches = selectPointsHex(params, context);
-  context.patches = filterPatchesByQuality(patches, context.refimg);
-  std::cerr << context.patches.size() << " valid patches\n";
+  patches = filterPatchesByQuality(patches, context.refimg());
+  context.patches(patches);
+  std::cerr << context.patches().size() << " valid patches\n";
 
   std::cerr << "Lucky imaging: registration & warping\n";
   Mat finalsum = lucky(params, context, true);

@@ -49,28 +49,29 @@ void globalRegistrator::getGlobalShifts(const registrationParams& params,
                                         const bool showProgress) {
   int progress = 0;
   if (showProgress)
-    std::fprintf(stderr, "0/%ld", context.images.size());
+    std::fprintf(stderr, "0/%ld", context.images().size());
   #pragma omp parallel
   {
     grayReader reader;
     globalRegistrator globalReg(refimg, params.prereg_maxmove);
     #pragma omp for schedule(dynamic)
-    for (int ifile = 0; ifile < (signed)context.images.size(); ifile++) {
-      auto& image = context.images.at(ifile);
+    for (int ifile = 0; ifile < (signed)context.images().size(); ifile++) {
+      auto& image = context.images().at(ifile);
       Mat img(reader.read(image.filename));
       image.globalShift = globalReg.findShift(img);
 
       if (showProgress) {
         #pragma omp critical
-        std::fprintf(stderr, "\r\033[K%d/%ld", ++progress, context.images.size());
+        std::fprintf(stderr, "\r\033[K%d/%ld", ++progress, context.images().size());
       }
     }
   }
   if (showProgress)
     std::fprintf(stderr, "\n");
 
-  context.crop = Rect(-context.images.at(0).globalShift, refimg.size());
-  for (auto& image : context.images) {
-        context.crop &= Rect(-image.globalShift, refimg.size());
+  Rect crop(-context.images().at(0).globalShift, refimg.size());
+  for (auto& image : context.images()) {
+        crop &= Rect(-image.globalShift, refimg.size());
   }
+  context.crop(crop);
 }

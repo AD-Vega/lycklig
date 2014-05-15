@@ -43,15 +43,57 @@ void write(cv::FileStorage& fs, const std::string&, const inputImage& image) {
 
 
 registrationContext::registrationContext(const cv::FileStorage& fs) {
-  fs["boxsize"] >> boxsize;
-  fs["crop"] >> crop;
-  fs["refimg"] >> refimg;
+  if (fs["boxsize"].isInt()) {
+    fs["boxsize"] >> priv_boxsize;
+    boxsize_valid = true;
+  }
 
-  for (const auto& i : fs["images"])
-    images.push_back(inputImage(i));
+  if (! fs["crop"].empty()) {
+    fs["crop"] >> priv_crop;
+    crop_valid = true;
+  }
 
-  for (const auto& i : fs["patches"])
-    patches.push_back(imagePatch(refimg, imagePatchPosition(i), boxsize));
+  if (! fs["refimg"].empty()) {
+    fs["refimg"] >> priv_refimg;
+    refimg_valid = true;
+  }
+
+  if (fs["images"].isSeq()) {
+    for (const auto& i : fs["images"])
+      priv_images.push_back(inputImage(i));
+    images_valid = true;
+  }
+
+  if (fs["patches"].isSeq()) {
+    for (const auto& i : fs["patches"])
+      priv_patches.push_back(imagePatch(priv_refimg, imagePatchPosition(i), priv_boxsize));
+    patches_valid = true;
+  }
+}
+
+void registrationContext::boxsize(int new_boxsize) {
+  priv_boxsize = new_boxsize;
+  boxsize_valid = true;
+}
+
+void registrationContext::images(std::vector<inputImage>& new_images) {
+  priv_images = new_images;
+  images_valid = true;
+}
+
+void registrationContext::crop(cv::Rect new_crop) {
+  priv_crop = new_crop;
+  crop_valid = true;
+}
+
+void registrationContext::refimg(cv::Mat& new_refimg) {
+  priv_refimg = new_refimg;
+  refimg_valid = true;
+}
+
+void registrationContext::patches(std::vector<imagePatch>& new_patches) {
+  priv_patches = new_patches;
+  patches_valid = true;
 }
 
 
@@ -74,11 +116,16 @@ void write(cv::FileStorage& fs,
 }
 
 void registrationContext::write(cv::FileStorage& fs) const {
-  fs << "boxsize" << boxsize
-     << "images" << images
-     << "crop" << crop
-     << "patches" << patches
-     << "refimg" << refimg;
+  if (boxsize_valid)
+    fs << "boxsize" << priv_boxsize;
+  if (images_valid)
+    fs << "images" << priv_images;
+  if (crop_valid)
+    fs << "crop" << priv_crop;
+  if (patches_valid)
+    fs << "patches" << priv_patches;
+  if (refimg_valid)
+    fs << "refimg" << priv_refimg;
 }
 
 void write(cv::FileStorage& fs,
