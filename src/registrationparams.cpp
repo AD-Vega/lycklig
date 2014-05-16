@@ -171,9 +171,17 @@ bool registrationParams::parse(const int argc, const char* argv[])
       }
       output_file = arg_output_file.getValue();
     }
-    else if (!arg_save_state.isSet()) {
-      std::cerr << "ERROR: refusing to discard data. Use --output or --save-state !" << std::endl;
-      return false;
+    else {
+      if (only_refimg || stage_stack) {
+        std::cerr << "ERROR: stacking enabled, but no --output given.\n"
+                     "       Refusing to discard the result.\n";
+        return false;
+      }
+      else if (!arg_save_state.isSet()) {
+        std::cerr << "ERROR: no destination file specified with --save-state.\n"
+                     "       Refusing to discard data.\n";
+        return false;
+      }
     }
   }
   catch (TCLAP::ArgException &e)
