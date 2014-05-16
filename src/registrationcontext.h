@@ -60,6 +60,8 @@ public:
   void patches(std::vector<imagePatch>& new_patches);
   void shifts(std::vector<cv::Mat1f>& new_shifts);
 
+  void clearShifts();
+
   // checks
   inline bool boxsizeValid() const { return boxsize_valid; }
   inline bool imagesValid() const { return images_valid; }

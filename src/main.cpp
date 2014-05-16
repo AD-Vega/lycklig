@@ -96,6 +96,9 @@ int main(const int argc, const char *argv[]) {
       patches = filterPatchesByQuality(patches, context.refimg());
       context.patches(patches);
       std::cerr << context.patches().size() << " valid patches\n";
+
+      // Changing the reference image invalidates lucky imaging shifts.
+      context.clearShifts();
     }
   }
 

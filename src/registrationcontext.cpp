@@ -111,6 +111,11 @@ void registrationContext::shifts(std::vector< cv::Mat1f >& new_shifts)
   shifts_valid = true;
 }
 
+void registrationContext::clearShifts() {
+  priv_shifts.clear();
+  shifts_valid = false;
+}
+
 
 void write(cv::FileStorage& fs,
            const std::string&,
