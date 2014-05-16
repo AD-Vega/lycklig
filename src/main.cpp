@@ -86,8 +86,7 @@ int main(const int argc, const char *argv[]) {
       imwrite(params.output_file, normalizeTo16Bits(rawRef));
     else {
       Mat refimg;
-      rawRef.convertTo(refimg, CV_32F);
-      cvtColor(refimg, refimg, CV_BGR2GRAY);
+      cvtColor(rawRef, refimg, CV_BGR2GRAY);
       context.refimg(refimg);
 
       // create registration patches

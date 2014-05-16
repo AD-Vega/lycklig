@@ -71,8 +71,7 @@ void linearRGB2sRGB(Mat& img) {
 
 
 Mat grayReader::read(const string& file) {
-  magickImread(file.c_str()).convertTo(imgcolor, CV_32F);
-  cvtColor(imgcolor, imggray, CV_BGR2GRAY);
+  cvtColor(magickImread(file.c_str()), imggray, CV_BGR2GRAY);
   return imggray;
 }
 
@@ -399,8 +398,7 @@ Mat lucky(const registrationParams& params,
     for (int ifile = 0; ifile < (signed)context.images().size(); ifile++) {
       // common step: load an image
       const auto& image = context.images().at(ifile);
-      Mat imgcolor;
-      magickImread(image.filename).convertTo(imgcolor, CV_32F);
+      Mat imgcolor = magickImread(image.filename);
       if (context.cropValid()) {
         if (params.crop)
           imgcolor = imgcolor(context.crop() + image.globalShift);

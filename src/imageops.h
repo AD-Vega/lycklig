@@ -37,7 +37,6 @@ public:
   cv::Mat read(const std::string& file);
 
 private:
-  cv::Mat imgcolor;
   cv::Mat1f imggray;
 };
 
