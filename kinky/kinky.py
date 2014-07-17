@@ -47,7 +47,8 @@ class HelpWidget(QWidget):
           <ul>
           <li>enhance image by dragging up/down and left/right,</li>
           <li>denoise image by dragging left/right while also holding
-              the left mouse button.</li>
+              the left mouse button,</li>
+          <li>hold Shift for greater precision.</li>
           </ul>
         <li>Zoom using mouse wheel or +/- keys.</li>
         <li>Press = or 0 to unzoom.</li>
@@ -159,14 +160,11 @@ class ImageEnhancer(QGraphicsView):
             self._saved = False
             dp = event.pos() - self._lastPos
             self._lastPos = event.pos()
-            self._k_enh *= 10**(-dp.y() / 100.)
+            self._k_enh *= 10**(-dp.y() / self._exp_factor)
             if event.buttons() & Qt.LeftButton:
-                self._σ_enh += dp.x() / 100.
+                self._σ_enh *= 10**(dp.x() / self._exp_factor)
             else:
-                self._σ_noise += dp.x() / 100.
-            if self._k_enh < 0: self._k_enh = 0
-            if self._σ_enh < 0: self._σ_enh = 0
-            if self._σ_noise < 0: self._σ_noise = 0
+                self._σ_noise *= 10**(dp.x() / self._exp_factor)
             self._overlay.updateLabels(self._k_enh, self._σ_enh, self._σ_noise)
             if not self._timer.isActive():
                 self._timer.start(100) # delayed update of the image
@@ -207,8 +205,16 @@ class ImageEnhancer(QGraphicsView):
             self.zoom(False)
         elif event.key() == Qt.Key_0 or event.key() == Qt.Key_Equal:
             self.zoom(None)
+        elif event.key() == Qt.Key_Shift:
+            self._exp_factor *= 5.
         else:
             super().keyPressEvent(event)
+
+    def keyReleaseEvent(self, event):
+        if event.key() == Qt.Key_Shift:
+            self._exp_factor /= 5.
+        else:
+            super().keyReleaseEvent(event)
 
     def saveImage(self):
         try:
@@ -269,7 +275,8 @@ class ImageEnhancer(QGraphicsView):
 
     _k_enh = 1.0
     _σ_enh = 0.25
-    _σ_noise = 0.0
+    _σ_noise = 0.1
+    _exp_factor = 200.
     _lastPos = QPoint()
     _timer = QTimer()
     _doUpdate = False
