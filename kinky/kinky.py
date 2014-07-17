@@ -33,15 +33,15 @@ def numpy2QImage(arrayImage):
     except:
         depth = 1
         height, width = arrayImage.shape
-    if arrayImage.dtype != 'uint8':
-        arrayImage = (arrayImage.astype('float') * 255 / arrayImage.max()).astype('uint8')
-    if depth != 3:
-        # TODO: wrap in a gray QImage
-        tmp = arrayImage
-        arrayImage = np.ndarray((height, width, 3), dtype = 'uint8')
-        for c in range(0,3):
-            arrayImage[:,:,c] = tmp
-    return QImage(arrayImage, width, height, QImage.Format_RGB888)
+        #TODO: gray images, irrelevant for now because imagemagick does not make them
+    arrayImage = (arrayImage.astype('float') * 255 / arrayImage.max()).astype('uint8')
+    qimg = QImage(width, height, QImage.Format_RGB888)
+    for l in range(0, qimg.height()):
+        line = qimg.scanLine(l)
+        line.setsize(width*depth)
+        arr = np.frombuffer(memoryview(line), dtype='uint8')
+        arr[:] = arrayImage[l, :, :].reshape(width*depth)
+    return qimg
 
 class OpaqueLabel(QLabel):
     def __init__(self, text = ""):
@@ -146,7 +146,7 @@ class ImageEnhancer(QGraphicsView):
         blob = PythonMagick.Blob()
         image.write(blob, chmap, 16)
         rawdata = b64decode(blob.base64())
-        self._img = np.ndarray((image.columns(), image.rows(), channels),
+        self._img = np.ndarray((image.rows(), image.columns(), channels),
                                dtype='uint16', buffer=rawdata)
         self._img = self._img.astype('float')
         self._scene = QGraphicsScene()
