@@ -242,8 +242,16 @@ class ImageEnhancer(QGraphicsView):
             return True
 
     def updateImage(self):
-        layer = ndimage.gaussian_filter(self._img, sigma=self._σ_noise)
-        layer -= ndimage.gaussian_filter(layer, sigma=self._σ_enh)
+        try:
+            depth = self._img.shape[2]
+        except:
+            depth = 1
+
+        layer = np.empty_like(self._img)
+        for ch in range(0, depth):
+            layer[:,:,ch] = ndimage.gaussian_filter(self._img[:,:,ch], sigma=self._σ_noise)
+            layer[:,:,ch] -= ndimage.gaussian_filter(layer[:,:,ch], sigma=self._σ_enh)
+
         self._newimg = np.fmax(0.0, self._img + self._k_enh * layer)
         self._qnewimg = numpy2QImage(self._newimg)
         self._pic.setPixmap(QPixmap.fromImage(self._qnewimg))
