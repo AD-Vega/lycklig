@@ -4,7 +4,6 @@ from PyQt4.QtGui import QApplication, QGraphicsView, QGraphicsScene, QPixmap, QI
     QGridLayout, QVBoxLayout, QHBoxLayout, QStackedLayout, QLabel, QWidget, \
     QPalette, QFileDialog, QMessageBox, QTransform
 from PyQt4.QtCore import Qt, QEvent, QPoint, QTimer
-from PyQt4.QtOpenGL import QGLWidget
 from base64 import b64decode, b64encode
 from scipy import ndimage
 import numpy as np
@@ -160,11 +159,11 @@ class ImageEnhancer(QGraphicsView):
             self._saved = False
             dp = event.pos() - self._lastPos
             self._lastPos = event.pos()
-            self._k_enh += -dp.y() / 100.
+            self._k_enh *= 10**(-dp.y() / 100.)
             if event.buttons() & Qt.LeftButton:
-                self._σ_noise += dp.x() / 100.
-            else:
                 self._σ_enh += dp.x() / 100.
+            else:
+                self._σ_noise += dp.x() / 100.
             if self._k_enh < 0: self._k_enh = 0
             if self._σ_enh < 0: self._σ_enh = 0
             if self._σ_noise < 0: self._σ_noise = 0
@@ -260,10 +259,9 @@ class ImageEnhancer(QGraphicsView):
         elif what == False:
             self.scale(0.9, 0.9)
 
-    _k_enh = 0.0
-    _σ_enh = 0.0
+    _k_enh = 1.0
+    _σ_enh = 0.25
     _σ_noise = 0.0
-    _scaling = 1.0
     _lastPos = QPoint()
     _timer = QTimer()
     _doUpdate = False
