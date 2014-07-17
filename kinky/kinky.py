@@ -87,7 +87,7 @@ class LabelsWidget(QWidget):
     def showDepth(self, depth):
         self._dlabel.setText(self._depthText.format(depth))
         self._dlabel.setVisible(True)
-        
+
     def updateLabels(self, k_enh, σ_enh, σ_noise):
         self._klabel.setText(self._klabelText.format(k_enh))
         self._elabel.setText(self._elabelText.format(σ_enh))
@@ -154,7 +154,7 @@ class ImageEnhancer(QGraphicsView):
             self._lastPos = QPoint()
             event.accept()
         super().mouseReleaseEvent(event)
-        
+
     def mouseMoveEvent(self, event):
         if event.buttons() & Qt.RightButton:
             self._saved = False
