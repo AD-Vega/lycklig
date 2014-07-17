@@ -28,14 +28,12 @@ import PythonMagick
 import sys, os
 
 def numpy2QImage(arrayImage):
-    try:
-        height, width, depth = arrayImage.shape
-    except:
-        depth = 1
-        height, width = arrayImage.shape
-        #TODO: gray images, irrelevant for now because imagemagick does not make them
+    height, width, depth = arrayImage.shape
     arrayImage = (arrayImage.astype('float') * 255 / arrayImage.max()).astype('uint8')
-    qimg = QImage(width, height, QImage.Format_RGB888)
+    if depth == 3:
+        qimg = QImage(width, height, QImage.Format_RGB888)
+    else:
+        qimg = QImage(width, height, QImage.Format_Indexed8)
     for l in range(0, qimg.height()):
         line = qimg.scanLine(l)
         line.setsize(width*depth)
@@ -137,17 +135,18 @@ class ImageEnhancer(QGraphicsView):
         self._filename = imagefile
         image = PythonMagick.Image(imagefile)
         self._overlay.showDepth(image.depth())
-        if image.colorSpace() == PythonMagick.ColorspaceType.GRAYColorspace:
-            channels = 1
-            chmap = 'K'
-        else:
-            channels = 3
-            chmap = 'RGB'
         blob = PythonMagick.Blob()
-        image.write(blob, chmap, 16)
+        # ImageMagick always makes color images ...
+        image.write(blob, 'RGB', 16)
         rawdata = b64decode(blob.base64())
-        self._img = np.ndarray((image.rows(), image.columns(), channels),
+        self._img = np.ndarray((image.rows(), image.columns(), 3),
                                dtype='uint16', buffer=rawdata)
+        # ... so make them grayscale if necessary
+        if (self._img[:,:,0] == self._img[:,:,1]).all() \
+            and (self._img[:,:,2] == self._img[:,:,1]).all():
+            tmp = np.ndarray((image.rows(), image.columns(), 1), dtype='uint16')
+            tmp[:,:,0] = self._img[:,:,0]
+            self._img = tmp
         self._img = self._img.astype('float')
         self._scene = QGraphicsScene()
         self._qimg = numpy2QImage(self._img)
@@ -234,11 +233,7 @@ class ImageEnhancer(QGraphicsView):
             super().keyReleaseEvent(event)
 
     def saveImage(self):
-        try:
-            height, width, depth = self._newimg.shape
-        except ValueError:
-            depth = 1
-            height, width = self._newimg.shape
+        height, width, depth = self._newimg.shape
         if depth == 3:
             cmap = 'RGB'
         else:
@@ -253,6 +248,13 @@ class ImageEnhancer(QGraphicsView):
             u16arr = (self._newimg / self._newimg.max() * (2**16-1)).astype('uint16')
             blob.base64(b64encode(bytes(u16arr)).decode('ascii'))
             image = PythonMagick.Image(blob, PythonMagick.Geometry(width, height), 16, cmap)
+            if depth == 1:
+                pass
+                # TODO: use image.type( GrayscaleType ), but the enum is not
+                # exported in PythonMagick. Below commented code does nothing of value.
+                #image.quantizeColorSpace(PythonMagick.ColorspaceType.GRAYColorspace)
+                #image.quantizeColors(2**16)
+                #image.quantize()
             error = ''
             try:
                 image.write(filename)
@@ -265,11 +267,7 @@ class ImageEnhancer(QGraphicsView):
             return True
 
     def updateImage(self):
-        try:
-            depth = self._img.shape[2]
-        except:
-            depth = 1
-
+        depth = self._img.shape[2]
         layer = np.empty_like(self._img)
         for ch in range(0, depth):
             layer[:,:,ch] = ndimage.gaussian_filter(self._img[:,:,ch], sigma=self._σ_noise)
