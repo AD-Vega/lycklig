@@ -67,6 +67,7 @@ class HelpWidget(QWidget):
           </ul>
         <li>Zoom using mouse wheel or +/- keys.</li>
         <li>Press = or 0 to unzoom.</li>
+        <li>Hold Tab to show the original image.</li>
         <li>Press H to show this text again.</li>
         <li>Press Q or Esc to quit (Q will ask to save the image).</li>
         <li>Press S to save the image.</li>
@@ -155,7 +156,7 @@ class ImageEnhancer(QGraphicsView):
         self._newimg = self._img
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.RightButton:
+        if event.button() == Qt.RightButton and not self._doNotOperate:
             self.setDragMode(QGraphicsView.NoDrag)
             self._lastPos = event.pos()
             event.accept()
@@ -172,7 +173,7 @@ class ImageEnhancer(QGraphicsView):
         super().mouseReleaseEvent(event)
 
     def mouseMoveEvent(self, event):
-        if event.buttons() & Qt.RightButton:
+        if event.buttons() & Qt.RightButton and not self._doNotOperate:
             self._saved = False
             dp = event.pos() - self._lastPos
             self._lastPos = event.pos()
@@ -223,12 +224,18 @@ class ImageEnhancer(QGraphicsView):
             self.zoom(None)
         elif event.key() == Qt.Key_Shift:
             self._exp_factor *= 5.
+        elif event.key() == Qt.Key_Tab:
+            self._doNotOperate = True
+            self._pic.setPixmap(QPixmap.fromImage(self._qimg))
         else:
             super().keyPressEvent(event)
 
     def keyReleaseEvent(self, event):
         if event.key() == Qt.Key_Shift:
             self._exp_factor /= 5.
+        elif event.key() == Qt.Key_Tab:
+            self._doNotOperate = False
+            self._pic.setPixmap(QPixmap.fromImage(self._qnewimg))
         else:
             super().keyReleaseEvent(event)
 
@@ -296,6 +303,7 @@ class ImageEnhancer(QGraphicsView):
     _timer = QTimer()
     _doUpdate = False
     _saved = True
+    _doNotOperate = False
 
 app = QApplication(sys.argv)
 enh = ImageEnhancer(sys.argv[1])
