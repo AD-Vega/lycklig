@@ -163,6 +163,7 @@ class ImageEnhancer(QGraphicsView):
             self._img = tmp
         self._img = self._img.astype('float')
         self._scene = QGraphicsScene()
+        self._scene.setBackgroundBrush(Qt.black)
         self._qimg = numpy2QImage(self._img)
         self._pic = self._scene.addPixmap(QPixmap.fromImage(self._qimg))
         self.setScene(self._scene)
