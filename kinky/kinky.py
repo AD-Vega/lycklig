@@ -19,7 +19,7 @@
 
 from PyQt4.QtGui import QApplication, QGraphicsView, QGraphicsScene, QPixmap, QImage, \
     QGridLayout, QVBoxLayout, QHBoxLayout, QStackedLayout, QLabel, QWidget, \
-    QPalette, QFileDialog, QMessageBox, QTransform, QTextDocument
+    QPalette, QFileDialog, QMessageBox, QTransform, QTextDocument, QMouseEvent
 from PyQt4.QtCore import Qt, QEvent, QPoint, QTimer, QSize
 from base64 import b64decode, b64encode
 from scipy import ndimage
@@ -171,29 +171,31 @@ class ImageEnhancer(QGraphicsView):
         self._newimg = self._img
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.RightButton and not self._doNotOperate:
+        if event.button() == Qt.LeftButton and not self._doNotOperate:
             self.setDragMode(QGraphicsView.NoDrag)
             self._lastPos = event.pos()
-            event.accept()
-        if event.button() == Qt.LeftButton:
             self._help.setVisible(False)
             event.accept()
+        elif event.button() == Qt.MiddleButton:
+            event = QMouseEvent(event.type(), event.pos(), Qt.LeftButton, Qt.LeftButton, event.modifiers())
         super().mousePressEvent(event)
 
     def mouseReleaseEvent(self, event):
-        if event.button() == Qt.RightButton:
+        if event.button() == Qt.LeftButton:
             self.setDragMode(QGraphicsView.ScrollHandDrag)
             self._lastPos = QPoint()
             event.accept()
+        elif event.button() == Qt.MiddleButton:
+            event = QMouseEvent(event.type(), event.pos(), Qt.LeftButton, Qt.LeftButton, event.modifiers())
         super().mouseReleaseEvent(event)
 
     def mouseMoveEvent(self, event):
-        if event.buttons() & Qt.RightButton and not self._doNotOperate:
+        if event.buttons() & Qt.LeftButton and not self._doNotOperate:
             self._saved = False
             dp = event.pos() - self._lastPos
             self._lastPos = event.pos()
             self._k_enh *= 10**(-dp.y() / self._exp_factor)
-            if event.buttons() & Qt.LeftButton:
+            if event.buttons() & Qt.RightButton:
                 self._σ_enh *= 10**(dp.x() / self._exp_factor)
             else:
                 self._σ_noise *= 10**(dp.x() / self._exp_factor)
