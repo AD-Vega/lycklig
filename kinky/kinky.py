@@ -19,13 +19,13 @@
 
 from PyQt4.QtGui import QApplication, QGraphicsView, QGraphicsScene, QPixmap, QImage, \
     QGridLayout, QVBoxLayout, QHBoxLayout, QStackedLayout, QLabel, QWidget, \
-    QPalette, QFileDialog, QMessageBox, QTransform
-from PyQt4.QtCore import Qt, QEvent, QPoint, QTimer
+    QPalette, QFileDialog, QMessageBox, QTransform, QTextDocument
+from PyQt4.QtCore import Qt, QEvent, QPoint, QTimer, QSize
 from base64 import b64decode, b64encode
 from scipy import ndimage
 import numpy as np
 import PythonMagick
-import sys, os
+import sys, os, math
 
 def numpy2QImage(arrayImage):
     height, width, depth = arrayImage.shape
@@ -76,10 +76,23 @@ class HelpWidget(QWidget):
         </p>
         """
         label = OpaqueLabel(txt)
+        tdoc = QTextDocument()
+        tdoc.setHtml('<h1>the Wavy Image Enhancer!</h1>')
+        width = tdoc.idealWidth()
+        tdoc.setHtml(txt)
+        tdoc.setTextWidth(width)
+        size = tdoc.size()
+        margin = 20
+        size = QSize(size.width() + 2*margin, size.height() + 2*margin)
+        label.setMargin(margin)
+        label.setMaximumSize(size)
+        label.setMinimumSize(size)
+        label.setWordWrap(True)
         self.setLayout(QGridLayout())
         self.layout().setAlignment(Qt.AlignCenter)
         self.layout().addWidget(label, 1, 1)
         self.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.setMinimumSize(label.sizeHint())
 
 class LabelsWidget(QWidget):
     def __init__(self):
@@ -128,9 +141,9 @@ class ImageEnhancer(QGraphicsView):
         self.setLayout(mainlayout)
         self._help = HelpWidget()
         self._overlay = LabelsWidget()
-        mainlayout.addWidget(self._help)
         mainlayout.addWidget(self._overlay)
-        mainlayout.setCurrentWidget(self._overlay)
+        mainlayout.addWidget(self._help)
+        mainlayout.setCurrentWidget(self._help)
 
         # Load and display image
         self._filename = imagefile
