@@ -58,14 +58,14 @@ class HelpWidget(QWidget):
         <p>
         <ul>
         <li>Click to dismiss this help text.</li>
-        <li>Click and drag to pan view.</li>
-        <li>Right-click and drag to:
+        <li>Drag holding the middle mouse button to pan view.</li>
+        <li>Click and drag to:
           <ul>
           <li>enhance image by dragging up/down and left/right,</li>
           <li>denoise image by dragging left/right while also holding
-              the left mouse button,</li>
-          <li>hold Shift for greater precision.</li>
+              the right mouse button.</li>
           </ul>
+        <li>Hold Shift while dragging for greater precision.</li>
         <li>Zoom using mouse wheel or +/- keys.</li>
         <li>Press = or 0 to unzoom.</li>
         <li>Hold Tab to show the original image.</li>
