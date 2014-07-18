@@ -34,11 +34,12 @@ def numpy2QImage(arrayImage):
         qimg = QImage(width, height, QImage.Format_RGB888)
     else:
         qimg = QImage(width, height, QImage.Format_Indexed8)
-    for l in range(0, qimg.height()):
-        line = qimg.scanLine(l)
-        line.setsize(width*depth)
-        arr = np.frombuffer(memoryview(line), dtype='uint8')
-        arr[:] = arrayImage[l, :, :].reshape(width*depth)
+    rawsize = height * qimg.bytesPerLine()
+    rawptr = qimg.bits()
+    rawptr.setsize(rawsize)
+    rawarr = np.frombuffer(memoryview(rawptr), dtype='uint8')
+    arr = rawarr.reshape((height, qimg.bytesPerLine()))
+    arr[:, 0:(width*depth)] = arrayImage[:, :, :].reshape((height, width*depth))
     return qimg
 
 class OpaqueLabel(QLabel):
