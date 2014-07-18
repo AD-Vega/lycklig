@@ -61,9 +61,10 @@ class HelpWidget(QWidget):
         <li>Drag holding the middle mouse button to pan view.</li>
         <li>Click and drag to:
           <ul>
-          <li>enhance image by dragging up/down and left/right,</li>
-          <li>denoise image by dragging left/right while also holding
-              the right mouse button.</li>
+          <li>enhance the image by dragging up/down,</li>
+          <li>denoise the image by dragging left/right,</li>
+          <li>set the finesse of enhancement by dragging left/right
+              while also holding the right mouse button.</li>
           </ul>
         <li>Hold Shift while dragging for greater precision.</li>
         <li>Zoom using mouse wheel or +/- keys.</li>
