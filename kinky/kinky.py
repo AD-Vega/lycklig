@@ -125,7 +125,7 @@ class LabelsWidget(QWidget):
         self._nlabel.setText(self._nlabelText.format(σ_noise))
 
     _depthText = "Image depth: {}-bit"
-    _klabelText = "Enhancement k: {:.2f}"
+    _klabelText = "Enhancement k: {:.5g}"
     _elabelText = "Enhancement σ: {:.2f}"
     _nlabelText = "Denoising σ: {:.2f}"
 
