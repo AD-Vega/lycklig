@@ -87,6 +87,14 @@ def saveImage(image, filename):
         #image.quantize()
     image.write(filename)
 
+def processImage(img, k_enh, σ_enh, σ_noise):
+    depth = img.shape[2]
+    layer = np.empty_like(img)
+    for ch in range(0, depth):
+        layer[:,:,ch] = ndimage.gaussian_filter(img[:,:,ch], sigma=σ_noise)
+        layer[:,:,ch] -= ndimage.gaussian_filter(layer[:,:,ch], sigma=σ_enh)
+    return np.fmax(0.0, img + k_enh * layer)
+
 class OpaqueLabel(QLabel):
     def __init__(self, text = ""):
         super().__init__()
@@ -317,13 +325,7 @@ class ImageEnhancer(QGraphicsView):
             return True
 
     def updateImage(self):
-        depth = self._img.shape[2]
-        layer = np.empty_like(self._img)
-        for ch in range(0, depth):
-            layer[:,:,ch] = ndimage.gaussian_filter(self._img[:,:,ch], sigma=self._σ_noise)
-            layer[:,:,ch] -= ndimage.gaussian_filter(layer[:,:,ch], sigma=self._σ_enh)
-
-        self._newimg = np.fmax(0.0, self._img + self._k_enh * layer)
+        self._newimg = processImage(self._img, self._k_enh, self._σ_enh, self._σ_noise)
         self._qnewimg = numpy2QImage(self._newimg)
         self._pic.setPixmap(QPixmap.fromImage(self._qnewimg))
         if self._doUpdate:
