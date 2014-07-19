@@ -51,6 +51,23 @@ def numpy2QImage(arrayImage):
     arr[:, 0:(width*depth)] = arrayImage[:, :, :].reshape((height, width*depth))
     return qimg
 
+def loadImage(filename):
+    image = PythonMagick.Image(filename)
+    blob = PythonMagick.Blob()
+    # ImageMagick always makes color images ...
+    image.write(blob, 'RGB', 16)
+    rawdata = b64decode(blob.base64())
+    img = np.ndarray((image.rows(), image.columns(), 3),
+                           dtype='uint16', buffer=rawdata)
+    # ... so make them grayscale if necessary
+    if (img[:,:,0] == img[:,:,1]).all() \
+       and (img[:,:,2] == img[:,:,1]).all():
+        tmp = np.ndarray((image.rows(), image.columns(), 1), dtype='uint16')
+        tmp[:,:,0] = img[:,:,0]
+        img = tmp
+    img = img.astype('float')
+    return img, image.depth()
+
 class OpaqueLabel(QLabel):
     def __init__(self, text = ""):
         super().__init__()
@@ -159,21 +176,8 @@ class ImageEnhancer(QGraphicsView):
 
         # Load and display image
         self._filename = imagefile
-        image = PythonMagick.Image(imagefile)
-        self._overlay.showDepth(image.depth())
-        blob = PythonMagick.Blob()
-        # ImageMagick always makes color images ...
-        image.write(blob, 'RGB', 16)
-        rawdata = b64decode(blob.base64())
-        self._img = np.ndarray((image.rows(), image.columns(), 3),
-                               dtype='uint16', buffer=rawdata)
-        # ... so make them grayscale if necessary
-        if (self._img[:,:,0] == self._img[:,:,1]).all() \
-            and (self._img[:,:,2] == self._img[:,:,1]).all():
-            tmp = np.ndarray((image.rows(), image.columns(), 1), dtype='uint16')
-            tmp[:,:,0] = self._img[:,:,0]
-            self._img = tmp
-        self._img = self._img.astype('float')
+        self._img, depth = loadImage(imagefile)
+        self._overlay.showDepth(depth)
         self._scene = QGraphicsScene()
         self._scene.setBackgroundBrush(Qt.black)
         self._qimg = numpy2QImage(self._img)
