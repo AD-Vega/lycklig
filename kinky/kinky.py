@@ -68,6 +68,25 @@ def loadImage(filename):
     img = img.astype('float')
     return img, image.depth()
 
+def saveImage(image, filename):
+    height, width, depth = image.shape
+    if depth == 3:
+        cmap = 'RGB'
+    else:
+        cmap = 'K'
+    blob = PythonMagick.Blob()
+    u16arr = (image / image.max() * (2**16-1)).astype('uint16')
+    blob.base64(b64encode(bytes(u16arr)).decode('ascii'))
+    image = PythonMagick.Image(blob, PythonMagick.Geometry(width, height), 16, cmap)
+    if depth == 1:
+        pass
+        # TODO: use image.type( GrayscaleType ), but the enum is not
+        # exported in PythonMagick. Below commented code does nothing of value.
+        #image.quantizeColorSpace(PythonMagick.ColorspaceType.GRAYColorspace)
+        #image.quantizeColors(2**16)
+        #image.quantize()
+    image.write(filename)
+
 class OpaqueLabel(QLabel):
     def __init__(self, text = ""):
         super().__init__()
@@ -279,11 +298,6 @@ class ImageEnhancer(QGraphicsView):
             super().keyReleaseEvent(event)
 
     def saveImage(self):
-        height, width, depth = self._newimg.shape
-        if depth == 3:
-            cmap = 'RGB'
-        else:
-            cmap = 'K'
         candidate, ext = os.path.splitext(self._filename)
         fmtstring = "_kay-{}_sigma-{}_noise-{}.png"
         candidate = candidate + fmtstring.format(_k_enh_prec, _σ_enh_prec, _σ_noise_prec)
@@ -291,20 +305,9 @@ class ImageEnhancer(QGraphicsView):
         namefilter = 'Image files (*.png *.tiff)'
         filename = QFileDialog.getSaveFileName(self, "Save Image", candidate, namefilter)
         if len(filename) > 0:
-            blob = PythonMagick.Blob()
-            u16arr = (self._newimg / self._newimg.max() * (2**16-1)).astype('uint16')
-            blob.base64(b64encode(bytes(u16arr)).decode('ascii'))
-            image = PythonMagick.Image(blob, PythonMagick.Geometry(width, height), 16, cmap)
-            if depth == 1:
-                pass
-                # TODO: use image.type( GrayscaleType ), but the enum is not
-                # exported in PythonMagick. Below commented code does nothing of value.
-                #image.quantizeColorSpace(PythonMagick.ColorspaceType.GRAYColorspace)
-                #image.quantizeColors(2**16)
-                #image.quantize()
             error = ''
             try:
-                image.write(filename)
+                saveImage(self._newimg, filename)
             except Exception as e:
                 error = 'Unexpected error: ' + str(e)
             if len(error) > 0:
