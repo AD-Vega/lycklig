@@ -31,6 +31,10 @@ _k_enh_prec = '{:.5g}'
 _σ_enh_prec = '{:.2f}'
 _σ_noise_prec = '{:.2f}'
 
+_k_enh_default = 1.0
+_σ_enh_default = 0.25
+_σ_noise_default = 0.1
+
 def numpy2QImage(arrayImage):
     height, width, depth = arrayImage.shape
     arrayImage = (arrayImage.astype('float') * 255 / arrayImage.max()).astype('uint8')
@@ -74,6 +78,7 @@ class HelpWidget(QWidget):
         <li>Zoom using mouse wheel or +/- keys.</li>
         <li>Press = or 0 to unzoom.</li>
         <li>Hold Tab to show the original image.</li>
+        <li>Press R to reset the image back to original.</li>
         <li>Press H to show this text again.</li>
         <li>Press Q or Esc to quit (Q will ask to save the image).</li>
         <li>Press S to save the image.</li>
@@ -249,6 +254,13 @@ class ImageEnhancer(QGraphicsView):
         elif event.key() == Qt.Key_Tab:
             self._doNotOperate = True
             self._pic.setPixmap(QPixmap.fromImage(self._qimg))
+        elif event.key() == Qt.Key_R:
+            self._k_enh = _k_enh_default
+            self._σ_enh = _σ_enh_default
+            self._σ_noise = _σ_noise_default
+            self._overlay.updateLabels(0.0, 0.0, 0.0)
+            self._saved = True
+            self.updateImage()
         else:
             super().keyPressEvent(event)
 
@@ -318,9 +330,9 @@ class ImageEnhancer(QGraphicsView):
         elif what == False:
             self.scale(0.9, 0.9)
 
-    _k_enh = 1.0
-    _σ_enh = 0.25
-    _σ_noise = 0.1
+    _k_enh = _k_enh_default
+    _σ_enh = _σ_enh_default
+    _σ_noise = _σ_noise_default
     _exp_factor = 200.
     _lastPos = QPoint()
     _timer = QTimer()
