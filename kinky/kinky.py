@@ -36,6 +36,8 @@ _k_enh_default = 1.0
 _σ_enh_default = 0.25
 _σ_noise_default = 0.1
 
+_zoom = 1.1
+
 def numpy2QImage(arrayImage):
     height, width, depth = arrayImage.shape
     arrayImage = (arrayImage.astype('float') * 255 / arrayImage.max()).astype('uint8')
@@ -187,6 +189,7 @@ class ImageEnhancer(QGraphicsView):
     def __init__(self, imagefile):
         super().__init__()
         self.setDragMode(QGraphicsView.ScrollHandDrag)
+        self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
         self.setWindowTitle("Kinky: " + imagefile)
         self._timer.timeout.connect(self.updateImage)
         self._timer.setSingleShot(True)
@@ -252,7 +255,6 @@ class ImageEnhancer(QGraphicsView):
     def wheelEvent(self, event):
         event.accept()
         self.zoom(event.delta() > 0)
-        super().wheelEvent(event)
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:
@@ -336,9 +338,9 @@ class ImageEnhancer(QGraphicsView):
         if what == None:
             self.setTransform(QTransform())
         elif what == True:
-            self.scale(1.1, 1.1)
+            self.scale(_zoom, _zoom)
         elif what == False:
-            self.scale(0.9, 0.9)
+            self.scale(1./_zoom, 1./_zoom)
 
     _k_enh = _k_enh_default
     _σ_enh = _σ_enh_default
