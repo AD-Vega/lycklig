@@ -27,6 +27,10 @@ import numpy as np
 import PythonMagick
 import sys, os, math
 
+_k_enh_prec = '{:.5g}'
+_σ_enh_prec = '{:.2f}'
+_σ_noise_prec = '{:.2f}'
+
 def numpy2QImage(arrayImage):
     height, width, depth = arrayImage.shape
     arrayImage = (arrayImage.astype('float') * 255 / arrayImage.max()).astype('uint8')
@@ -125,9 +129,9 @@ class LabelsWidget(QWidget):
         self._nlabel.setText(self._nlabelText.format(σ_noise))
 
     _depthText = "Image depth: {}-bit"
-    _klabelText = "Enhancement k: {:.5g}"
-    _elabelText = "Enhancement σ: {:.2f}"
-    _nlabelText = "Denoising σ: {:.2f}"
+    _klabelText = "Enhancement k: " + _k_enh_prec
+    _elabelText = "Enhancement σ: " + _σ_enh_prec
+    _nlabelText = "Denoising σ: " + _σ_noise_prec
 
 class ImageEnhancer(QGraphicsView):
     def __init__(self, imagefile):
@@ -264,7 +268,8 @@ class ImageEnhancer(QGraphicsView):
         else:
             cmap = 'K'
         candidate, ext = os.path.splitext(self._filename)
-        candidate = candidate + "_kay-{:.2f}_sigma-{:.2f}_noise-{:.2f}.png"
+        fmtstring = "_kay-{}_sigma-{}_noise-{}.png"
+        candidate = candidate + fmtstring.format(_k_enh_prec, _σ_enh_prec, _σ_noise_prec)
         candidate = candidate.format(self._k_enh, self._σ_enh, self._σ_noise)
         namefilter = 'Image files (*.png *.tiff)'
         filename = QFileDialog.getSaveFileName(self, "Save Image", candidate, namefilter)
