@@ -352,49 +352,49 @@ class ImageEnhancer(QGraphicsView):
     _saved = True
     _doNotOperate = False
 
+if __name__ == '__main__':
+    # Check if any arguments are given. If not, or if a single argument
+    # is given, show GUI
+    if len(sys.argv) < 3 and sys.argv[1] != '-h':
+        app = QApplication(sys.argv)
+        try:
+            if len(sys.argv) == 2:
+                enh = ImageEnhancer(sys.argv[1])
+            else:
+                namefilter = 'Image files (*.png *.tiff *.ppm *.pnm *.pgm *.jpg *.bmp)'
+                filename = QFileDialog.getOpenFileName(None, "Open file", '', namefilter)
+                enh = ImageEnhancer(filename)
+        except Exception as e:
+            error = 'Unexpected error: ' + str(e)
+            QMessageBox.warning(None, 'Error saving image', error)
+            sys.exit(1)
+        enh.show()
+        retval = app.exec_()
+        del enh
+        del app
+        sys.exit(retval)
 
-# Check if any arguments are given. If not, or if a single argument
-# is given, show GUI
-if len(sys.argv) < 3 and sys.argv[1] != '-h':
-    app = QApplication(sys.argv)
-    try:
-        if len(sys.argv) == 2:
-            enh = ImageEnhancer(sys.argv[1])
-        else:
-            namefilter = 'Image files (*.png *.tiff *.ppm *.pnm *.pgm *.jpg *.bmp)'
-            filename = QFileDialog.getOpenFileName(None, "Open file", '', namefilter)
-            enh = ImageEnhancer(filename)
-    except Exception as e:
-        error = 'Unexpected error: ' + str(e)
-        QMessageBox.warning(None, 'Error saving image', error)
-        sys.exit(1)
-    enh.show()
-    retval = app.exec_()
-    del enh
-    del app
-    sys.exit(retval)
+    # Parse arguments and process the given image.
 
-# Parse arguments and process the given image.
+    def nonneg(arg):
+        f = float(arg)
+        if f >= 0: return f
+        msg = 'Negative image enhancement parameters are not valid.'
+        raise ArgumentTypeError(msg)
 
-def nonneg(arg):
-    f = float(arg)
-    if f >= 0: return f
-    msg = 'Negative image enhancement parameters are not valid.'
-    raise ArgumentTypeError(msg)
+    description="""
+    Enahance image using wavelets. Run without arguments or with a
+    single argument giving the input image to show the graphical interface.
+    """
+    parser = ArgumentParser(description=description)
+    parser.add_argument('-k', type=nonneg, required=True, help='Enhancement k coefficient.')
+    parser.add_argument('-s', type=nonneg, required=True, help='Enhancement σ parameter.')
+    parser.add_argument('-n', type=nonneg, required=True, help='Noise σ parameter.')
+    parser.add_argument('-i', type=str, required=True, help='Input image.')
+    parser.add_argument('-o', type=str, required=True, help='Output image.')
+    args = parser.parse_args(sys.argv[1:])
 
-description="""
-Enahance image using wavelets. Run without arguments or with a
-single argument giving the input image to show the graphical interface.
-"""
-parser = ArgumentParser(description=description)
-parser.add_argument('-k', type=nonneg, required=True, help='Enhancement k coefficient.')
-parser.add_argument('-s', type=nonneg, required=True, help='Enhancement σ parameter.')
-parser.add_argument('-n', type=nonneg, required=True, help='Noise σ parameter.')
-parser.add_argument('-i', type=str, required=True, help='Input image.')
-parser.add_argument('-o', type=str, required=True, help='Output image.')
-args = parser.parse_args(sys.argv[1:])
-
-img, depth = loadImage(args.i)
-img = processImage(img, args.k, args.s, args.n)
-saveImage(img, args.o)
-sys.exit(0)
+    img, depth = loadImage(args.i)
+    img = processImage(img, args.k, args.s, args.n)
+    saveImage(img, args.o)
+    sys.exit(0)
