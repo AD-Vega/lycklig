@@ -23,6 +23,7 @@ from PyQt4.QtGui import QApplication, QGraphicsView, QGraphicsScene, QPixmap, QI
 from PyQt4.QtCore import Qt, QEvent, QPoint, QTimer, QSize
 from base64 import b64decode, b64encode
 from scipy import ndimage
+from argparse import ArgumentParser, ArgumentTypeError
 import numpy as np
 import PythonMagick
 import sys, os, math
@@ -340,10 +341,46 @@ class ImageEnhancer(QGraphicsView):
     _saved = True
     _doNotOperate = False
 
-app = QApplication(sys.argv)
-enh = ImageEnhancer(sys.argv[1])
-enh.show()
-retval = app.exec_()
-del enh
-del app
-sys.exit(retval)
+
+# Check if any arguments are given. If not, or if a single argument
+# is given, show GUI
+if len(sys.argv) < 3:
+    app = QApplication(sys.argv)
+    try:
+        if len(sys.argv) == 2:
+            enh = ImageEnhancer(sys.argv[1])
+        else:
+            namefilter = 'Image files (*.png *.tiff *.ppm *.pnm *.pgm *.jpg *.bmp)'
+            filename = QFileDialog.getOpenFileName(None, "Open file", '', namefilter)
+            enh = ImageEnhancer(filename)
+    except Exception as e:
+        error = 'Unexpected error: ' + str(e)
+        QMessageBox.warning(None, 'Error saving image', error)
+        sys.exit(1)
+    enh.show()
+    retval = app.exec_()
+    del enh
+    del app
+    sys.exit(retval)
+
+# Parse arguments and process the given image.
+
+def nonneg(arg):
+    f = float(arg)
+    if f >= 0: return f
+    msg = 'Negative image enhancement parameters are not valid.'
+    raise ArgumentTypeError(msg)
+
+description="""
+Enahance image using wavelets. Run without arguments to show the
+graphical interface.
+"""
+parser = ArgumentParser(description=description)
+parser.add_argument('-k', type=nonneg, required=True, help='Enhancement k coefficient.')
+parser.add_argument('-s', type=nonneg, required=True, help='Enhancement σ parameter.')
+parser.add_argument('-n', type=nonneg, required=True, help='Noise σ parameter.')
+parser.add_argument('-i', type=str, required=True, help='Input image.')
+parser.add_argument('-o', type=str, required=True, help='Output image.')
+args = parser.parse_args(sys.argv[1:])
+
+sys.exit(25)
