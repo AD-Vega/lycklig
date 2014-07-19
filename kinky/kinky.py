@@ -353,7 +353,7 @@ class ImageEnhancer(QGraphicsView):
 
 # Check if any arguments are given. If not, or if a single argument
 # is given, show GUI
-if len(sys.argv) < 3:
+if len(sys.argv) < 3 and sys.argv[1] != '-h':
     app = QApplication(sys.argv)
     try:
         if len(sys.argv) == 2:
@@ -381,8 +381,8 @@ def nonneg(arg):
     raise ArgumentTypeError(msg)
 
 description="""
-Enahance image using wavelets. Run without arguments to show the
-graphical interface.
+Enahance image using wavelets. Run without arguments or with a
+single argument giving the input image to show the graphical interface.
 """
 parser = ArgumentParser(description=description)
 parser.add_argument('-k', type=nonneg, required=True, help='Enhancement k coefficient.')
@@ -392,4 +392,7 @@ parser.add_argument('-i', type=str, required=True, help='Input image.')
 parser.add_argument('-o', type=str, required=True, help='Output image.')
 args = parser.parse_args(sys.argv[1:])
 
-sys.exit(25)
+img, depth = loadImage(args.i)
+img = processImage(img, args.k, args.s, args.n)
+saveImage(img, args.o)
+sys.exit(0)
