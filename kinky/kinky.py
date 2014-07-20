@@ -256,10 +256,10 @@ class ImageEnhancer(QGraphicsView):
         event.accept()
         self.zoom(event.delta() > 0)
 
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Escape:
-            self.close()
-        elif event.key() == Qt.Key_Q:
+    def closeEvent(self, event):
+        if (self._saved == None):
+            event.accept()
+        else:
             buttons = QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel
             if self._saved:
                 button = QMessageBox.Discard
@@ -272,7 +272,20 @@ class ImageEnhancer(QGraphicsView):
                 if button == QMessageBox.Save:
                     success = self.saveImage()
                 if success:
-                    self.close()
+                    event.accept()
+                else:
+                    event.ignore()
+            else:
+                event.ignore()
+        if event.isAccepted():
+            super().closeEvent(event)
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Escape:
+            self._saved = None
+            self.close()
+        elif event.key() == Qt.Key_Q:
+            self.close()
         elif event.key() == Qt.Key_S:
             self.saveImage()
         elif event.key() == Qt.Key_H:
