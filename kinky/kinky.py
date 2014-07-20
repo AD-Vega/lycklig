@@ -25,7 +25,7 @@ from PyQt4.QtCore import Qt, QEvent, QPoint, QTimer, QSize, QThread, \
 from base64 import b64decode, b64encode
 from scipy import ndimage
 from argparse import ArgumentParser, ArgumentTypeError
-from multiprocessing import Process, Pipe
+from multiprocessing import Process, Pipe, Pool
 import numpy as np
 import PythonMagick
 import sys, os, math
@@ -33,6 +33,9 @@ import sys, os, math
 _k_enh_prec = '{:.5g}'
 _σ_enh_prec = '{:.2f}'
 _σ_noise_prec = '{:.2f}'
+_filename_fmtstring = "_kay-{}_sigma-{}_noise-{}.png"
+_filename_fmtstring = _filename_fmtstring.format(_k_enh_prec, _σ_enh_prec,
+                                                 _σ_noise_prec)
 
 _k_enh_default = 1.0
 _σ_enh_default = 0.25
@@ -370,8 +373,7 @@ class ImageEnhancer(QGraphicsView):
 
     def saveImage(self):
         candidate, ext = os.path.splitext(self._filename)
-        fmtstring = "_kay-{}_sigma-{}_noise-{}.png"
-        candidate = candidate + fmtstring.format(_k_enh_prec, _σ_enh_prec, _σ_noise_prec)
+        candidate = candidate + _filename_fmtstring
         candidate = candidate.format(self._k_enh, self._σ_enh, self._σ_noise)
         namefilter = 'Image files (*.png *.tiff)'
         filename = QFileDialog.getSaveFileName(self, "Save Image", candidate, namefilter)
@@ -458,15 +460,58 @@ if __name__ == '__main__':
     Enahance image using wavelets. Run without arguments or with a
     single argument giving the input image to show the graphical interface.
     """
-    parser = ArgumentParser(description=description)
-    parser.add_argument('-k', type=nonneg, required=True, help='Enhancement k coefficient.')
-    parser.add_argument('-s', type=nonneg, required=True, help='Enhancement σ parameter.')
-    parser.add_argument('-n', type=nonneg, required=True, help='Noise σ parameter.')
-    parser.add_argument('-i', type=str, required=True, help='Input image.')
-    parser.add_argument('-o', type=str, required=True, help='Output image.')
-    args = parser.parse_args(sys.argv[1:])
+    epilog="""
+    If the output directory is specified, the processed images are put there,
+    otherwise they are put in the same directory as the source image. They are
+    named the same as the source image with the values of processing parameters
+    appended to their names. This behaviour can be disabled with the '-r' option.
+    """
+    parser = ArgumentParser(description=description, epilog=epilog)
+    parser.add_argument('-k', type=nonneg, required=True,
+                        help='Enhancement k coefficient.')
+    parser.add_argument('-s', type=nonneg, required=True,
+                        help='Enhancement σ parameter.')
+    parser.add_argument('-n', type=nonneg, required=True,
+                        help='Noise σ parameter.')
+    parser.add_argument('-o', type=str, required=False, default=None,
+                        help='Output directory.')
+    parser.add_argument('-r', action='store_true', required=False, default=False,
+                        help='Do not rename images.')
+    parser.add_argument('-f', action='store_true', required=False, default=False,
+                        help='Force processing even if it would overwrite source images.')
+    parser.add_argument('images', type=str, nargs='+',
+                        help='Images to be processed.')
 
-    img, depth = loadImage(args.i)
-    img = processImage(img, args.k, args.s, args.n)
-    saveImage(img, args.o)
+    args = parser.parse_args(sys.argv[1:])
+    if args.r and args.o == None and not args.f:
+        print('Renaming disabled but output directory not specified!')
+        print('This would overwrite source images. If you are sure you')
+        print("want to do this, use the '-f' option.")
+        sys.exit(1)
+
+    def batchProcess(filename):
+        def rename(name):
+            destfile, ext = os.path.splitext(name)
+            destfile = destfile + _filename_fmtstring + ext
+            destfile = destfile.format(args.k, args.s, args.n)
+            return destfile
+
+        if args.o == None:
+            if args.r:
+                destfile = filename
+            else:
+                destfile = rename(filename)
+        else:
+            destfile = os.path.basename(filename)
+            if not args.r:
+                destfile = rename(destfile)
+            destfile = args.o + '/' + destfile
+        img, depth = loadImage(filename)
+        img = processImage(img, args.k, args.s, args.n)
+        saveImage(img, destfile)
+
+    pool = Pool()
+    pool.map(batchProcess, args.images)
+    pool.close()
+    pool.join()
     sys.exit(0)
