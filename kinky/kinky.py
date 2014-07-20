@@ -20,10 +20,11 @@
 from PyQt4.QtGui import QApplication, QGraphicsView, QGraphicsScene, QPixmap, QImage, \
     QGridLayout, QVBoxLayout, QHBoxLayout, QStackedLayout, QLabel, QWidget, \
     QPalette, QFileDialog, QMessageBox, QTransform, QTextDocument, QMouseEvent
-from PyQt4.QtCore import Qt, QEvent, QPoint, QTimer, QSize
+from PyQt4.QtCore import Qt, QEvent, QPoint, QTimer, QSize, QThread
 from base64 import b64decode, b64encode
 from scipy import ndimage
 from argparse import ArgumentParser, ArgumentTypeError
+from multiprocessing import Process, Pipe
 import numpy as np
 import PythonMagick
 import sys, os, math
@@ -96,6 +97,38 @@ def processImage(img, k_enh, σ_enh, σ_noise):
         layer[:,:,ch] = ndimage.gaussian_filter(img[:,:,ch], sigma=σ_noise)
         layer[:,:,ch] -= ndimage.gaussian_filter(layer[:,:,ch], sigma=σ_enh)
     return np.fmax(0.0, img + k_enh * layer)
+
+class AsyncFunction(QThread):
+    def __init__(self, func, staticData = None):
+        super().__init__()
+        self._static = staticData
+        self._in, self._out = Pipe()
+        self._process = Process(target=AsyncFunction._processRun,
+                                args=(func, self._static, self._out))
+        self._process.start()
+
+    def __del__(self):
+        self._process.terminate()
+
+    def apply(self, *args):
+        self._args = args
+        self.start()
+
+    def result(self):
+        return self._result
+
+    def _processRun(func, staticData, pipe):
+        while True:
+            args = pipe.recv()
+            if staticData == None:
+                result = func(*args)
+            else:
+                result = func(staticData, *args)
+            pipe.send(result)
+
+    def run(self):
+        self._in.send(self._args)
+        self._result = self._in.recv()
 
 class OpaqueLabel(QLabel):
     def __init__(self, text = ""):
@@ -191,8 +224,6 @@ class ImageEnhancer(QGraphicsView):
         self.setDragMode(QGraphicsView.ScrollHandDrag)
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
         self.setWindowTitle("Kinky: " + imagefile)
-        self._timer.timeout.connect(self.updateImage)
-        self._timer.setSingleShot(True)
 
         # Prepare the overlay display widgets
         mainlayout = QStackedLayout()
@@ -214,6 +245,9 @@ class ImageEnhancer(QGraphicsView):
         self._pic = self._scene.addPixmap(QPixmap.fromImage(self._qimg))
         self.setScene(self._scene)
         self._newimg = self._img
+
+        self._processor = AsyncFunction(processImage, self._img)
+        self._processor.finished.connect(self.drawImage)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton and not self._doNotOperate:
@@ -245,10 +279,7 @@ class ImageEnhancer(QGraphicsView):
             else:
                 self._σ_noise *= 10**(dp.x() / self._exp_factor)
             self._overlay.updateLabels(self._k_enh, self._σ_enh, self._σ_noise)
-            if not self._timer.isActive():
-                self._timer.start(100) # delayed update of the image
-            else:
-                self._doUpdate = True
+            self.updateImage()
             event.accept()
         super().mouseMoveEvent(event)
 
@@ -340,12 +371,18 @@ class ImageEnhancer(QGraphicsView):
             return True
 
     def updateImage(self):
-        self._newimg = processImage(self._img, self._k_enh, self._σ_enh, self._σ_noise)
-        self._qnewimg = numpy2QImage(self._newimg)
-        self._pic.setPixmap(QPixmap.fromImage(self._qnewimg))
+        if not self._processor.isRunning():
+            self._processor.apply(self._k_enh, self._σ_enh, self._σ_noise)
+        else:
+            self._doUpdate = True
+
+    def drawImage(self):
+        self._newimg = self._processor.result()
         if self._doUpdate:
             self._doUpdate = False
-            self._timer.start()
+            self.updateImage()
+        self._qnewimg = numpy2QImage(self._newimg)
+        self._pic.setPixmap(QPixmap.fromImage(self._qnewimg))
 
     def zoom(self, what):
         if what == None:
@@ -360,7 +397,6 @@ class ImageEnhancer(QGraphicsView):
     _σ_noise = _σ_noise_default
     _exp_factor = 200.
     _lastPos = QPoint()
-    _timer = QTimer()
     _doUpdate = False
     _saved = True
     _doNotOperate = False
