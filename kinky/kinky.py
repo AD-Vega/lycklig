@@ -251,8 +251,9 @@ class ImageEnhancer(QGraphicsView):
         self._overlay.showDepth(depth)
         self._scene = QGraphicsScene()
         self._scene.setBackgroundBrush(Qt.black)
-        self._qimg = numpy2QImage(self._img)
-        self._pic = self._scene.addPixmap(QPixmap.fromImage(self._qimg))
+        qimg = numpy2QImage(self._img)
+        self._pixmap = QPixmap.fromImage(qimg)
+        self._pic = self._scene.addPixmap(self._pixmap)
         self.setScene(self._scene)
         self._newimg = self._img
 
@@ -341,7 +342,7 @@ class ImageEnhancer(QGraphicsView):
             self._exp_factor *= 5.
         elif event.key() == Qt.Key_Tab:
             self._doNotOperate = True
-            self._pic.setPixmap(QPixmap.fromImage(self._qimg))
+            self._pic.setPixmap(self._pixmap)
         elif event.key() == Qt.Key_R:
             self._k_enh = _k_enh_default
             self._σ_enh = _σ_enh_default
