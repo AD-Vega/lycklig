@@ -357,7 +357,7 @@ class ImageEnhancer(QGraphicsView):
             self._exp_factor /= 5.
         elif event.key() == Qt.Key_Tab:
             self._doNotOperate = False
-            self._pic.setPixmap(QPixmap.fromImage(self._qnewimg))
+            self._pic.setPixmap(self._newpixmap)
         else:
             super().keyReleaseEvent(event)
 
@@ -395,6 +395,7 @@ class ImageEnhancer(QGraphicsView):
         pix = QPixmap()
         s.__rshift__(pix)
         self._pic.setPixmap(pix)
+        self._newpixmap = pix
 
     def zoom(self, what):
         if what == None:
