@@ -20,7 +20,8 @@
 from PyQt4.QtGui import QApplication, QGraphicsView, QGraphicsScene, QPixmap, QImage, \
     QGridLayout, QVBoxLayout, QHBoxLayout, QStackedLayout, QLabel, QWidget, \
     QPalette, QFileDialog, QMessageBox, QTransform, QTextDocument, QMouseEvent
-from PyQt4.QtCore import Qt, QEvent, QPoint, QTimer, QSize, QThread
+from PyQt4.QtCore import Qt, QEvent, QPoint, QTimer, QSize, QThread, \
+    QDataStream, QByteArray, QIODevice
 from base64 import b64decode, b64encode
 from scipy import ndimage
 from argparse import ArgumentParser, ArgumentTypeError
@@ -97,6 +98,15 @@ def processImage(img, k_enh, σ_enh, σ_noise):
         layer[:,:,ch] = ndimage.gaussian_filter(img[:,:,ch], sigma=σ_noise)
         layer[:,:,ch] -= ndimage.gaussian_filter(layer[:,:,ch], sigma=σ_enh)
     return np.fmax(0.0, img + k_enh * layer)
+
+def processImageAsync(*args):
+    img = processImage(*args)
+    qimg = numpy2QImage(img)
+    pix = QPixmap.fromImage(qimg)
+    b = QByteArray()
+    s = QDataStream(b, QIODevice.WriteOnly)
+    s.__lshift__(pix)
+    return img, b
 
 class AsyncFunction(QThread):
     def __init__(self, func, staticData = None):
@@ -246,7 +256,7 @@ class ImageEnhancer(QGraphicsView):
         self.setScene(self._scene)
         self._newimg = self._img
 
-        self._processor = AsyncFunction(processImage, self._img)
+        self._processor = AsyncFunction(processImageAsync, self._img)
         self._processor.finished.connect(self.drawImage)
 
     def mousePressEvent(self, event):
@@ -377,12 +387,14 @@ class ImageEnhancer(QGraphicsView):
             self._doUpdate = True
 
     def drawImage(self):
-        self._newimg = self._processor.result()
+        self._newimg, pixBarr = self._processor.result()
         if self._doUpdate:
             self._doUpdate = False
             self.updateImage()
-        self._qnewimg = numpy2QImage(self._newimg)
-        self._pic.setPixmap(QPixmap.fromImage(self._qnewimg))
+        s = QDataStream(pixBarr)
+        pix = QPixmap()
+        s.__rshift__(pix)
+        self._pic.setPixmap(pix)
 
     def zoom(self, what):
         if what == None:
