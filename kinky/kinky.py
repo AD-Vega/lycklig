@@ -203,6 +203,7 @@ class LabelsWidget(QWidget):
         self._klabel = OpaqueLabel()
         self._elabel = OpaqueLabel()
         self._nlabel = OpaqueLabel()
+        self._busyLabel = OpaqueLabel("Working...")
         self.updateLabels(0.0, 0.0, 0.0)
         self.setLayout(QHBoxLayout())
         self.layout().setAlignment(Qt.AlignTop | Qt.AlignLeft)
@@ -211,12 +212,17 @@ class LabelsWidget(QWidget):
         col.addWidget(self._elabel)
         col.addWidget(self._nlabel)
         col.addWidget(self._dlabel)
+        col.addWidget(self._busyLabel)
         self.layout().addLayout(col)
         self._dlabel.setVisible(False)
+        self._busyLabel.setVisible(False)
 
     def showDepth(self, depth):
         self._dlabel.setText(self._depthText.format(depth))
         self._dlabel.setVisible(True)
+
+    def showBusy(self, busy):
+        self._busyLabel.setVisible(busy)
 
     def updateLabels(self, k_enh, σ_enh, σ_noise):
         self._klabel.setText(self._klabelText.format(k_enh))
@@ -384,6 +390,7 @@ class ImageEnhancer(QGraphicsView):
     def updateImage(self):
         if not self._processor.isRunning():
             self._processor.apply(self._k_enh, self._σ_enh, self._σ_noise)
+            self._overlay.showBusy(True)
         else:
             self._doUpdate = True
 
@@ -392,6 +399,8 @@ class ImageEnhancer(QGraphicsView):
         if self._doUpdate:
             self._doUpdate = False
             self.updateImage()
+        else:
+            self._overlay.showBusy(False)
         s = QDataStream(pixBarr)
         pix = QPixmap()
         s.__rshift__(pix)
