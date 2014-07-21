@@ -19,7 +19,7 @@
 
 from PyQt4.QtGui import QApplication, QGraphicsView, QGraphicsScene, QPixmap, QImage, \
     QGridLayout, QVBoxLayout, QHBoxLayout, QStackedLayout, QLabel, QWidget, \
-    QPalette, QFileDialog, QMessageBox, QTransform, QTextDocument, QMouseEvent
+    QPalette, QFileDialog, QMessageBox, QTransform, QTextDocument, QMouseEvent, qRgb
 from PyQt4.QtCore import Qt, QEvent, QPoint, QTimer, QSize, QThread
 from base64 import b64decode, b64encode
 from scipy import ndimage
@@ -42,6 +42,8 @@ _σ_noise_default = 0.1
 
 _zoom = 1.1
 
+_colorTable = [ qRgb(i, i, i) for i in range(0, 256) ]
+
 def numpy2QImage(arrayImage):
     """Normalize a numpy ndarray and convert it into a QImage. It will return
     either a Format_RGB888 or Format_Indexed8 image, dependint on the depth of
@@ -52,6 +54,7 @@ def numpy2QImage(arrayImage):
         qimg = QImage(width, height, QImage.Format_RGB888)
     else:
         qimg = QImage(width, height, QImage.Format_Indexed8)
+        qimg.setColorTable(_colorTable)
     rawsize = height * qimg.bytesPerLine()
     rawptr = qimg.bits()
     rawptr.setsize(rawsize)
@@ -64,6 +67,7 @@ def loadImage(filename):
     """Read the provided file and return the image as a numpy.ndarray of
     shape (height, width, colors)."""
     image = PythonMagick.Image(filename)
+    depth = image.depth()
     blob = PythonMagick.Blob()
     # ImageMagick always makes color images ...
     image.write(blob, 'RGB', 16)
@@ -77,7 +81,7 @@ def loadImage(filename):
         tmp[:,:,0] = img[:,:,0]
         img = tmp
     img = img.astype('float')
-    return img, image.depth()
+    return img, depth
 
 def saveImage(image, filename):
     """Read the provided numpy.ndarray of shape (height, width, colors), convert
