@@ -33,7 +33,7 @@ import sys, os, math
 _k_enh_prec = '{:.5g}'
 _σ_enh_prec = '{:.2f}'
 _σ_noise_prec = '{:.2f}'
-_filename_fmtstring = "_kay-{}_sigma-{}_noise-{}.png"
+_filename_fmtstring = "_k{}_sigma{}_noise{}"
 _filename_fmtstring = _filename_fmtstring.format(_k_enh_prec, _σ_enh_prec,
                                                  _σ_noise_prec)
 
@@ -373,7 +373,7 @@ class ImageEnhancer(QGraphicsView):
 
     def saveImage(self):
         candidate, ext = os.path.splitext(self._filename)
-        candidate = candidate + _filename_fmtstring
+        candidate = candidate + _filename_fmtstring + '.png'
         candidate = candidate.format(self._k_enh, self._σ_enh, self._σ_noise)
         namefilter = 'Image files (*.png *.tiff)'
         filename = QFileDialog.getSaveFileName(self, "Save Image", candidate, namefilter)
