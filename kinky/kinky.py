@@ -427,26 +427,32 @@ class ImageEnhancer(QGraphicsView):
     _doNotOperate = False
 
 if __name__ == '__main__':
+
     # Check if any arguments are given. If not, or if a single argument
     # is given, show GUI
     if len(sys.argv) < 2 or (len(sys.argv) < 3 and sys.argv[1] != '-h'):
         app = QApplication(sys.argv)
+        enh = None
         try:
             if len(sys.argv) == 2:
                 enh = ImageEnhancer(sys.argv[1])
             else:
                 namefilter = 'Image files (*.png *.tiff *.ppm *.pnm *.pgm *.jpg *.bmp)'
                 filename = QFileDialog.getOpenFileName(None, "Open file", '', namefilter)
-                enh = ImageEnhancer(filename)
+                if filename != '':
+                    enh = ImageEnhancer(filename)
         except Exception as e:
             error = 'Unexpected error: ' + str(e)
             QMessageBox.warning(None, 'Error saving image', error)
             sys.exit(1)
-        enh.show()
-        retval = app.exec_()
-        del enh
-        del app
-        sys.exit(retval)
+        if enh != None:
+            enh.show()
+            retval = app.exec_()
+            del enh
+            del app
+            sys.exit(retval)
+        else:
+            sys.exit(1)
 
     # Parse arguments and process the given image.
 
