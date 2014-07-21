@@ -43,6 +43,9 @@ _σ_noise_default = 0.1
 _zoom = 1.1
 
 def numpy2QImage(arrayImage):
+    """Normalize a numpy ndarray and convert it into a QImage. It will return
+    either a Format_RGB888 or Format_Indexed8 image, dependint on the depth of
+    input image"""
     height, width, depth = arrayImage.shape
     arrayImage = (arrayImage.astype('float') * 255 / arrayImage.max()).astype('uint8')
     if depth == 3:
@@ -58,6 +61,8 @@ def numpy2QImage(arrayImage):
     return qimg
 
 def loadImage(filename):
+    """Read the provided file and return the image as a numpy.ndarray of
+    shape (height, width, colors)."""
     image = PythonMagick.Image(filename)
     blob = PythonMagick.Blob()
     # ImageMagick always makes color images ...
@@ -75,6 +80,10 @@ def loadImage(filename):
     return img, image.depth()
 
 def saveImage(image, filename):
+    """Read the provided numpy.ndarray of shape (height, width, colors), convert
+    it into a 16-bit integer color format and write it into the provided file. The
+    filename extension determines the file format. The image will be converted into
+    an 8-bit format if necessary."""
     height, width, depth = image.shape
     if depth == 3:
         cmap = 'RGB'
@@ -94,6 +103,7 @@ def saveImage(image, filename):
     image.write(filename)
 
 def processImage(img, k_enh, σ_enh, σ_noise):
+    """Wavelet filter the provided numpy image array and return the result."""
     depth = img.shape[2]
     layer = np.empty_like(img)
     for ch in range(0, depth):
@@ -102,7 +112,15 @@ def processImage(img, k_enh, σ_enh, σ_noise):
     return np.fmax(0.0, img + k_enh * layer)
 
 class AsyncFunction(QThread):
+    """A small class that wraps python's multiprocessing.Process into a QThread,
+    allowing integration into Qt's event loop."""
+
     def __init__(self, func, staticData = None):
+        """The provided function is assigned to the Process, which is spawned
+        in the background. If staticData != None, the function must accept it
+        as it's first argument. This allows assigning some non-changing data
+        to the process so that it does not need to be sent over every time
+        the function is called."""
         super().__init__()
         self._static = staticData
         self._in, self._out = Pipe()
@@ -114,10 +132,15 @@ class AsyncFunction(QThread):
         self._process.terminate()
 
     def apply(self, *args):
+        """Apply the function assigned to this process to the provided arguments.
+        The function is applied asynchronously, thus the call returns immediately.
+        Use the isRunning() method or the finished() signal to learn when results
+        can be retrieved."""
         self._args = args
         self.start()
 
     def result(self):
+        """Retrieve the result of the last call to apply()."""
         return self._result
 
     def _processRun(func, staticData, pipe):
@@ -130,6 +153,7 @@ class AsyncFunction(QThread):
             pipe.send(result)
 
     def run(self):
+        """Implementation of the protected run() method, do not call externally."""
         self._in.send(self._args)
         self._result = self._in.recv()
 
