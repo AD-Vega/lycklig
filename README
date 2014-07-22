@@ -1,0 +1,61 @@
+lycklig - image processing for lucky imaging
+kinky   - the wavy image enhancer
+============================================
+
+lycklig is a software package for lucky imaging. It can align and
+stack a set of images to increase noise-to-signal ratio, taking into
+account image distortions caused by the atmosphere. It includes kinky,
+which uses the "gaussian wavelet" decomposition technique to sharpen
+the final image.
+
+lycklig can:
+    * precisely align images;
+    * stack (i.e. average) aligned images;
+    * deform images to compensate for atmospheric distortions;
+    * sharpen images using gaussian wavelets;
+    * use supersampling to increase resolution;
+    * save intermediate data to avoid recomputing it later.
+
+Homepage: https://gitorious.org/adv/lycklig/
+
+See also: https://gitorious.org/adv/arif/
+          arif can pre-align and filter images by quality, estimating
+          the bluriness caused by the atmosphere.
+
+Requirements and installation
+=============================
+
+lycklig core requires tclap, ImageMagick and OpenCV, which must be
+version 2.4.8 or later.
+
+The kinky program requires Python version 3.3 or later, PyQt4, the
+NumPy and SciPy packages and the PythonMagick wrapper.
+
+lycklig is built using CMake. If you are not familiar with CMake, refer
+to any tutorial. But for starters, run these commands from the lycklig
+source directory:
+
+  mkdir build
+  cd build
+  cmake ..
+  make
+  sudo make install
+
+You can skip the "make install" step and run lycklig from the build
+directory directly, although there might be problems with localization
+and icon loading for kinky's graphical interface.
+
+lycklig is a command line utility, provide the '--help' option to
+obtain usage summary. kinky is a graphical utility, but it too can be
+used from command line to sharpen images without using a graphical
+interface. It, too, responds to the '--help' option.
+
+
+Licensing information
+=====================
+
+lycklig is provided under the GNU General Public License, version 3 or
+later. See COPYING for more information.
+
+Copyright 2014 Andrej Lajovic <andrej.lajovic@ad-vega.si>
+	       Jure Varlec <jure.varlec@ad-vega.si>
