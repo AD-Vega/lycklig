@@ -3,7 +3,7 @@ kinky   - the wavy image enhancer
 ============================================
 
 lycklig is a software package for lucky imaging. It can align and
-stack a set of images to increase noise-to-signal ratio, taking into
+stack a set of images to increase signal-to-noise ratio, taking into
 account image distortions caused by the atmosphere. It includes kinky,
 which uses the "gaussian wavelet" decomposition technique to sharpen
 the final image.
