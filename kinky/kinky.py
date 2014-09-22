@@ -444,7 +444,7 @@ if __name__ == '__main__':
 
     # Check if any arguments are given. If not, or if a single argument
     # is given, show GUI
-    if len(sys.argv) < 2 or (len(sys.argv) < 3 and sys.argv[1] != '-h'):
+    if len(sys.argv) < 2 or (len(sys.argv) < 3 and sys.argv[1] not in ['-h', '--help']):
         app = QApplication(sys.argv)
         enh = None
         try:
