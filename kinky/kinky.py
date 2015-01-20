@@ -367,7 +367,7 @@ class ImageEnhancer(QGraphicsView):
             self.zoom(None)
         elif event.key() == Qt.Key_Shift:
             self._exp_factor *= 5.
-        elif event.key() == Qt.Key_Tab:
+        elif event.key() == Qt.Key_Tab and not event.isAutoRepeat():
             self._doNotOperate = True
             self._pic.setPixmap(self._pixmap)
         elif event.key() == Qt.Key_R:
@@ -383,7 +383,7 @@ class ImageEnhancer(QGraphicsView):
     def keyReleaseEvent(self, event):
         if event.key() == Qt.Key_Shift:
             self._exp_factor /= 5.
-        elif event.key() == Qt.Key_Tab:
+        elif event.key() == Qt.Key_Tab and not event.isAutoRepeat():
             self._doNotOperate = False
             self._pic.setPixmap(self._newpixmap)
         else:
@@ -421,7 +421,8 @@ class ImageEnhancer(QGraphicsView):
             self.updateImage()
         else:
             self._overlay.showBusy(False)
-        self._pic.setPixmap(QPixmap.fromImage(numpy2QImage(self._newimg)))
+        self._newpixmap = QPixmap.fromImage(numpy2QImage(self._newimg))
+        self._pic.setPixmap(self._newpixmap)
 
     def zoom(self, what):
         if what is None:
