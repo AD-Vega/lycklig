@@ -150,7 +150,7 @@ class AsyncFunction(QThread):
     def _processRun(func, staticData, pipe):
         while True:
             args = pipe.recv()
-            if staticData == None:
+            if staticData is None:
                 result = func(*args)
             else:
                 result = func(staticData, *args)
@@ -326,7 +326,7 @@ class ImageEnhancer(QGraphicsView):
         self.zoom(event.delta() > 0)
 
     def closeEvent(self, event):
-        if (self._saved == None):
+        if (self._saved is None):
             event.accept()
         else:
             buttons = QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel
@@ -424,7 +424,7 @@ class ImageEnhancer(QGraphicsView):
         self._pic.setPixmap(QPixmap.fromImage(numpy2QImage(self._newimg)))
 
     def zoom(self, what):
-        if what == None:
+        if what is None:
             self.setTransform(QTransform())
         elif what == True:
             self.scale(_zoom, _zoom)
@@ -503,7 +503,7 @@ if __name__ == '__main__':
                         help='Images to be processed.')
 
     args = parser.parse_args(sys.argv[1:])
-    if args.r and args.o == None and not args.f:
+    if args.r and args.o is None and not args.f:
         print('Renaming disabled but output directory not specified!')
         print('This would overwrite source images. If you are sure you')
         print("want to do this, use the '-f' option.")
@@ -516,7 +516,7 @@ if __name__ == '__main__':
             destfile = destfile.format(args.k, args.s, args.n)
             return destfile
 
-        if args.o == None:
+        if args.o is None:
             if args.r:
                 destfile = filename
             else:
