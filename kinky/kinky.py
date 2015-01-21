@@ -30,8 +30,8 @@ import PythonMagick
 import sys, os, math
 
 _k_enh_prec = '{:.5g}'
-_σ_enh_prec = '{:.2f}'
-_σ_noise_prec = '{:.2f}'
+_σ_enh_prec = '{:.3f}'
+_σ_noise_prec = '{:.3f}'
 _filename_fmtstring = "_k{}_sigma{}_noise{}"
 _filename_fmtstring = _filename_fmtstring.format(_k_enh_prec, _σ_enh_prec,
                                                  _σ_noise_prec)
@@ -284,6 +284,17 @@ class ImageEnhancer(QGraphicsView):
         self.setScene(self._scene)
         self._newimg = self._img
 
+        # Initialize enhancement values
+        self._k_enh = _k_enh_default
+        self._σ_enh = _σ_enh_default
+        self._σ_noise = _σ_noise_default
+        self._exp_factor = 200.
+        self._lastPos = QPoint()
+        self._doUpdate = False
+        self._saved = True
+        self._doNotOperate = False
+
+        # Prepare for asynchronous processing
         self._processor = AsyncFunction(processImage, self._img)
         self._processor.finished.connect(self.drawImage)
 
@@ -431,15 +442,6 @@ class ImageEnhancer(QGraphicsView):
             self.scale(_zoom, _zoom)
         elif what == False:
             self.scale(1./_zoom, 1./_zoom)
-
-    _k_enh = _k_enh_default
-    _σ_enh = _σ_enh_default
-    _σ_noise = _σ_noise_default
-    _exp_factor = 200.
-    _lastPos = QPoint()
-    _doUpdate = False
-    _saved = True
-    _doNotOperate = False
 
 if __name__ == '__main__':
 
