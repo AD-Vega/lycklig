@@ -29,6 +29,7 @@ public:
 
   bool stage_prereg = false;
   bool stage_refimg = false;
+  bool stage_patches = false;
   bool stage_lucky = false;
   bool stage_stack = false;
 
@@ -39,7 +40,8 @@ public:
   // reference image + registration points
   bool only_refimg = false;
   bool crop = false;
-  unsigned int boxsize = 60;
+  int boxsize = 60;
+  bool boxsize_override = false;
 
   // lucky imaging
   unsigned int maxmove = 20;

@@ -42,17 +42,23 @@ int main(const int argc, const char *argv[]) {
 
   registrationContext context;
 
+  // Resolve stage dependencies.
+  bool need_patches = params.stage_patches || params.stage_lucky;
+  bool need_refimg = params.stage_refimg || need_patches;
+
   // Load a state file if one was supplied.
   if (!params.read_state_file.empty()) {
     std::cerr << "Reading state from '" << params.read_state_file << "'\n";
     FileStorage readStateFS(params.read_state_file, FileStorage::READ);
     context = registrationContext(readStateFS);
     std::cerr << context.images().size() << " input files read from state file\n";
+
+    if (context.boxsizeValid() && !params.boxsize_override)
+      params.boxsize = context.boxsize();
   }
   else {
     // No state file - we are starting from scratch. Initialize registration
     // context from command line parameters.
-    context.boxsize(params.boxsize);
     std::vector<inputImage> images;
     for (auto& file : params.files)
       images.push_back(inputImage(file));
@@ -70,35 +76,46 @@ int main(const int argc, const char *argv[]) {
     }
     std::cerr << "Pre-registering\n";
     globalRegistrator::getGlobalShifts(params, context, globalRefimg, true);
+
+    // New global shifts invalidate any further data in the context.
+    context.clearBoxsizeEtc();
   }
 
-  // If we are going to do lucky imaging, we need a reference image. If there
-  // was none in the state file, we need to make one now.
-  if (params.stage_lucky && !context.refimgValid())
-    params.stage_refimg = true;
-
-  // reference image + possibly registration patches
-  if (params.stage_refimg) {
+  // reference image
+  if (params.stage_refimg || (need_refimg && !context.refimgValid())) {
     std::cerr << "Creating a stacked reference image\n";
     Mat rawRef = meanimg(params, context, true);
 
     if (params.only_refimg)
       imwrite(params.output_file, normalizeTo16Bits(rawRef));
-    else {
-      Mat refimg;
-      cvtColor(rawRef, refimg, CV_BGR2GRAY);
-      context.refimg(refimg);
 
-      // create registration patches
-      std::cerr << "Lucky imaging: creating registration patches\n";
-      auto patches = selectPointsHex(params, context);
-      patches = filterPatchesByQuality(patches, context.refimg());
-      context.patches(patches);
-      std::cerr << context.patches().size() << " valid patches\n";
+    // Save the black&white reference image to context.
+    Mat refimg;
+    cvtColor(rawRef, refimg, CV_BGR2GRAY);
+    context.refimg(refimg);
 
-      // Changing the reference image invalidates lucky imaging shifts.
-      context.clearShifts();
-    }
+    // Changing the reference image invalidates lucky imaging registration
+    // points.
+    context.clearPatchesEtc();
+  }
+
+  // Check whether we need to override context.boxsize() with a value from
+  // the command line. If there is a conflict, we invalidate any further data
+  // (registration points, lucky imaging shifts).
+  if (need_patches && params.boxsize_override)
+    context.clearPatchesEtc();
+
+  // lucky imaging registration points
+  if (params.stage_patches || (need_patches && !context.patchesValid())) {
+    context.boxsize(params.boxsize);
+    std::cerr << "Lucky imaging: creating registration patches\n";
+    auto patches = selectPointsHex(params, context);
+    patches = filterPatchesByQuality(patches, context.refimg());
+    context.patches(patches);
+    std::cerr << context.patches().size() << " valid patches\n";
+
+    // Changing the registration points invalidates lucky imaging shifts.
+    context.clearShiftsEtc();
   }
 
   if (params.stage_lucky || params.stage_stack) {

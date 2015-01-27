@@ -57,7 +57,7 @@ bool registrationParams::parse(const int argc, const char* argv[])
                              false, prereg_maxmove, "pixels");
     cmd.add(arg_prereg_maxmove);
 
-    // reference image + registration points
+    // reference image
     TCLAP::SwitchArg arg_refimg(
       "r", "refimg", "Create a reference image to be used as a template for lucky imaging.", stage_refimg);
     cmd.add(arg_refimg);
@@ -68,6 +68,11 @@ bool registrationParams::parse(const int argc, const char* argv[])
       "c", "crop", "Crop the image to the area common to all input images "
                    "(only effective with pre-registration; a no-op otherwise).", crop);
     cmd.add(arg_crop);
+
+    // registration points
+    TCLAP::SwitchArg arg_patches(
+      "a", "patches", "Create registration points for lucky imaging.", stage_patches);
+    cmd.add(arg_patches);
     TCLAP::ValueArg<unsigned int> arg_boxsize(
       "b", "boxsize", "Box size " + defval(boxsize), false, boxsize, "pixels");
     cmd.add(arg_boxsize);
@@ -120,6 +125,7 @@ bool registrationParams::parse(const int argc, const char* argv[])
       stage_prereg = true;
     }
     stage_refimg = arg_refimg.isSet();
+    stage_patches = arg_patches.isSet();
     stage_lucky = arg_lucky.isSet();
     stage_stack = arg_stack.isSet();
 
@@ -133,6 +139,7 @@ bool registrationParams::parse(const int argc, const char* argv[])
       stage_refimg = true;
     }
 
+    boxsize_override = arg_boxsize.isSet();
     boxsize = arg_boxsize.getValue();
     crop = arg_crop.isSet();
     maxmove = arg_maxmove.getValue();

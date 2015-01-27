@@ -111,7 +111,19 @@ void registrationContext::shifts(std::vector< cv::Mat1f >& new_shifts)
   shifts_valid = true;
 }
 
-void registrationContext::clearShifts() {
+void registrationContext::clearBoxsizeEtc() {
+  priv_boxsize = 0;
+  boxsize_valid = false;
+  clearPatchesEtc();
+}
+
+void registrationContext::clearPatchesEtc() {
+  priv_patches.clear();
+  patches_valid = false;
+  clearShiftsEtc();
+}
+
+void registrationContext::clearShiftsEtc() {
   priv_shifts.clear();
   shifts_valid = false;
 }
