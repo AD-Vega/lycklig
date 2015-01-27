@@ -73,5 +73,5 @@ void globalRegistrator::getGlobalShifts(const registrationParams& params,
   for (auto& image : context.images()) {
         crop &= Rect(-image.globalShift, refimg.size());
   }
-  context.crop(crop);
+  context.commonRectangle(crop);
 }

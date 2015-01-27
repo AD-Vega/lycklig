@@ -47,7 +47,7 @@ public:
   inline int boxsize() const { return priv_boxsize; }
   inline std::vector<inputImage>& images() { return priv_images; }
   inline const std::vector<inputImage>& images() const { return priv_images; }
-  inline cv::Rect crop() const { return priv_crop; }
+  inline cv::Rect commonRectangle() const { return priv_commonRectangle; }
   inline const cv::Mat& refimg() const { return priv_refimg; }
   inline const std::vector<imagePatch>& patches() const { return priv_patches; }
   inline const std::vector<cv::Mat1f>& shifts() const { return priv_shifts; }
@@ -55,7 +55,7 @@ public:
   // modificators
   void boxsize(int new_boxsize);
   void images(std::vector<inputImage>& new_images);
-  void crop(cv::Rect new_crop);
+  void commonRectangle(cv::Rect new_commonRectangle);
   void refimg(cv::Mat& new_refimg);
   void patches(std::vector<imagePatch>& new_patches);
   void shifts(std::vector<cv::Mat1f>& new_shifts);
@@ -65,7 +65,7 @@ public:
   // checks
   inline bool boxsizeValid() const { return boxsize_valid; }
   inline bool imagesValid() const { return images_valid; }
-  inline bool cropValid() const { return crop_valid; }
+  inline bool commonRectangleValid() const { return commonRectangle_valid; }
   inline bool refimgValid() const { return refimg_valid; }
   inline bool patchesValid() const { return patches_valid; }
   inline bool shiftsValid() const { return shifts_valid; }
@@ -77,8 +77,8 @@ private:
   std::vector<inputImage> priv_images;
   bool images_valid = false;
 
-  cv::Rect priv_crop = cv::Rect(0, 0, 0, 0);
-  bool crop_valid = false;
+  cv::Rect priv_commonRectangle = cv::Rect(0, 0, 0, 0);
+  bool commonRectangle_valid = false;
 
   cv::Mat priv_refimg;
   bool refimg_valid = false;

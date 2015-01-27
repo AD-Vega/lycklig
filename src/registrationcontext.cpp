@@ -48,9 +48,9 @@ registrationContext::registrationContext(const cv::FileStorage& fs) {
     boxsize_valid = true;
   }
 
-  if (! fs["crop"].empty()) {
-    fs["crop"] >> priv_crop;
-    crop_valid = true;
+  if (! fs["commonRectangle"].empty()) {
+    fs["commonRectangle"] >> priv_commonRectangle;
+    commonRectangle_valid = true;
   }
 
   if (! fs["refimg"].empty()) {
@@ -90,9 +90,9 @@ void registrationContext::images(std::vector<inputImage>& new_images) {
   images_valid = true;
 }
 
-void registrationContext::crop(cv::Rect new_crop) {
-  priv_crop = new_crop;
-  crop_valid = true;
+void registrationContext::commonRectangle(cv::Rect new_commonRectangle) {
+  priv_commonRectangle = new_commonRectangle;
+  commonRectangle_valid = true;
 }
 
 void registrationContext::refimg(cv::Mat& new_refimg) {
@@ -140,8 +140,8 @@ void registrationContext::write(cv::FileStorage& fs) const {
     fs << "boxsize" << priv_boxsize;
   if (images_valid)
     fs << "images" << priv_images;
-  if (crop_valid)
-    fs << "crop" << priv_crop;
+  if (commonRectangle_valid)
+    fs << "commonRectangle" << priv_commonRectangle;
   if (patches_valid)
     fs << "patches" << priv_patches;
   if (refimg_valid)

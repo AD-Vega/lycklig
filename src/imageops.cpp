@@ -84,8 +84,8 @@ Mat meanimg(const registrationParams& params,
   Rect imgRect(Point(0, 0), sample.size());
 
   Mat imgmean;
-  if (params.crop && context.cropValid())
-    imgmean = Mat::zeros(context.crop().size(), CV_MAKETYPE(CV_32F, sample.channels()));
+  if (params.crop && context.commonRectangleValid())
+    imgmean = Mat::zeros(context.commonRectangle().size(), CV_MAKETYPE(CV_32F, sample.channels()));
   else
     imgmean = Mat::zeros(sample.size(), CV_MAKETYPE(CV_32F, sample.channels()));
 
@@ -101,9 +101,9 @@ Mat meanimg(const registrationParams& params,
       auto image = images.at(i);
       Mat data = magickImread(image.filename);
 
-      if (context.cropValid()) {
+      if (context.commonRectangleValid()) {
         if (params.crop)
-          accumulate(data(context.crop() + image.globalShift), localsum);
+          accumulate(data(context.commonRectangle() + image.globalShift), localsum);
         else {
           Rect sourceRoi = (imgRect + image.globalShift) & imgRect;
           Rect destRoi = sourceRoi - image.globalShift;
@@ -373,8 +373,8 @@ Mat lucky(const registrationParams& params,
   // STACKING: initialization
   Mat finalsum;
   if (params.stage_stack) {
-    if (params.crop && context.cropValid())
-      finalsum = Mat::zeros(context.crop().size() * params.supersampling, CV_32FC3);
+    if (params.crop && context.commonRectangleValid())
+      finalsum = Mat::zeros(context.commonRectangle().size() * params.supersampling, CV_32FC3);
     else {
       Mat sample = magickImread(context.images().at(0).filename);
       finalsum = Mat::zeros(sample.size() * params.supersampling, CV_32FC3);
@@ -399,9 +399,9 @@ Mat lucky(const registrationParams& params,
       // common step: load an image
       const auto& image = context.images().at(ifile);
       Mat imgcolor = magickImread(image.filename);
-      if (context.cropValid()) {
+      if (context.commonRectangleValid()) {
         if (params.crop)
-          imgcolor = imgcolor(context.crop() + image.globalShift);
+          imgcolor = imgcolor(context.commonRectangle() + image.globalShift);
         else {
           Mat tmp = Mat::zeros(imgcolor.size(), imgcolor.type());
           Rect imgRect(Point(0, 0), imgcolor.size());
