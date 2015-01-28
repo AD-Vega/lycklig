@@ -131,12 +131,9 @@ bool registrationParams::parse(const int argc, const char* argv[])
 
     // options
     only_refimg = arg_only_refimg.isSet();
-    if (only_refimg) {
-      if (stage_stack) {
-        std::cerr << "ERROR: --only-refimg and --stack can not be enabled at the same time." << std::endl;
-        return false;
-      }
-      stage_refimg = true;
+    if (only_refimg && stage_stack) {
+      std::cerr << "ERROR: --only-refimg and --stack can not be enabled at the same time." << std::endl;
+      return false;
     }
 
     boxsize_override = arg_boxsize.isSet();

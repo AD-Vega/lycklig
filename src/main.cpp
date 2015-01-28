@@ -48,10 +48,11 @@ int main(const int argc, const char *argv[]) {
 
   // Load a state file if one was supplied.
   if (!params.read_state_file.empty()) {
-    std::cerr << "Reading state from '" << params.read_state_file << "'\n";
+    std::cerr << "Reading state from '" << params.read_state_file << "':\n";
     FileStorage readStateFS(params.read_state_file, FileStorage::READ);
     context = registrationContext(readStateFS);
-    std::cerr << context.images().size() << " input files read from state file\n";
+    context.printReport();
+    std::cerr << std::endl;
 
     if (context.boxsizeValid() && !params.boxsize_override)
       params.boxsize = context.boxsize();
@@ -74,21 +75,36 @@ int main(const int argc, const char *argv[]) {
     if (params.prereg_maxmove == 0) {
       params.prereg_maxmove = std::min(globalRefimg.rows, globalRefimg.cols)/2;
     }
-    std::cerr << "Pre-registering\n";
+    std::cerr << "Pre-registering on reference '" << params.prereg_img << "'\n";
     globalRegistrator::getGlobalShifts(params, context, globalRefimg, true);
 
     // New global shifts invalidate any further data in the context.
-    context.clearBoxsizeEtc();
+    std::cerr << "New pre-registration data obtained\n";
+    context.clearRefimgEtc();
   }
 
   // reference image
-  if (params.stage_refimg || (need_refimg && !context.refimgValid())) {
+  Mat rawRef;
+  if (params.stage_refimg || params.only_refimg ||
+      (need_refimg && !context.refimgValid())) {
     std::cerr << "Creating a stacked reference image\n";
-    Mat rawRef = meanimg(params, context, true);
-
-    if (params.only_refimg)
-      imwrite(params.output_file, normalizeTo16Bits(rawRef));
-
+    // This creates a color image. See below for implications.
+    rawRef = meanimg(params, context, true);
+  }
+  if (params.only_refimg) {
+    std::cerr << "Saving quick stack into '"
+              << params.output_file << "'\n";
+    // This saves the color image.
+    imwrite(params.output_file, normalizeTo16Bits(rawRef));
+  }
+  // From now on, we will only store a black&white version of the reference
+  // image. Pushing a new reference image into the registration context
+  // means invalidating any further data (registration points, lucky imaging
+  // shifts), so we will only do that if
+  //   a) the creation of a new reference image was explicitly requested
+  //   b) we currently don't have one, but need it in further stages
+  // Note that params.only_refimg does not imply any of these!
+  if (params.stage_refimg || (need_refimg && !context.refimgValid())) {
     // Save the black&white reference image to context.
     Mat refimg;
     cvtColor(rawRef, refimg, CV_BGR2GRAY);
@@ -96,14 +112,18 @@ int main(const int argc, const char *argv[]) {
 
     // Changing the reference image invalidates lucky imaging registration
     // points.
+    std::cerr << "New reference image created\n";
     context.clearPatchesEtc();
   }
 
   // Check whether we need to override context.boxsize() with a value from
   // the command line. If there is a conflict, we invalidate any further data
   // (registration points, lucky imaging shifts).
-  if (need_patches && params.boxsize_override)
+  if (need_patches && params.boxsize_override && context.boxsizeValid() &&
+      params.boxsize != context.boxsize()) {
+    std::cerr << "New boxsize specified on the command line\n";
     context.clearPatchesEtc();
+  }
 
   // lucky imaging registration points
   if (params.stage_patches || (need_patches && !context.patchesValid())) {
@@ -131,6 +151,7 @@ int main(const int argc, const char *argv[]) {
     Mat finalsum = lucky(params, context, true);
     // Only save the result if there is something to save.
     if (params.stage_stack)
+      std::cerr << "Saving output to '" << params.output_file << "'\n";
       imwrite(params.output_file, normalizeTo16Bits(finalsum));
   }
 

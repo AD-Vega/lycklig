@@ -16,6 +16,7 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <iostream>
 #include "registrationcontext.h"
 
 inputImage::inputImage(std::string filename_) :
@@ -111,19 +112,27 @@ void registrationContext::shifts(std::vector< cv::Mat1f >& new_shifts)
   shifts_valid = true;
 }
 
-void registrationContext::clearBoxsizeEtc() {
-  priv_boxsize = 0;
-  boxsize_valid = false;
+void registrationContext::clearRefimgEtc() {
+  if (refimg_valid)
+    std::cerr << "  Invalidating current reference image\n";
+  priv_refimg = cv::Mat();
+  refimg_valid = false;
   clearPatchesEtc();
 }
 
 void registrationContext::clearPatchesEtc() {
+  if (patches_valid)
+    std::cerr << "  Invalidating existing registration points\n";
+  priv_boxsize = 0;
+  boxsize_valid = false;
   priv_patches.clear();
   patches_valid = false;
   clearShiftsEtc();
 }
 
 void registrationContext::clearShiftsEtc() {
+  if (shifts_valid)
+    std::cerr << "  Invalidating existing lucky imaging shifts\n";
   priv_shifts.clear();
   shifts_valid = false;
 }
@@ -166,4 +175,18 @@ void write(cv::FileStorage& fs,
            const std::string&,
            const registrationContext& context) {
   context.write(fs);
+}
+
+void registrationContext::printReport() const {
+  if (images_valid)
+    std::cerr << "  * " << images().size() << " images\n";
+  if (commonRectangle_valid)
+    std::cerr << "  * global registration data\n";
+  if (refimg_valid)
+    std::cerr << "  * reference image\n";
+  if (patches_valid)
+    std::cerr << "  * " << patches().size() << " registration points (boxsize "
+      << boxsize() << ")\n";
+  if (shifts_valid)
+    std::cerr << "  * lucky imaging shifts\n";
 }

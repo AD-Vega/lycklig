@@ -42,6 +42,7 @@ public:
   registrationContext() = default;
   registrationContext(const cv::FileStorage& fs);
   void write(cv::FileStorage& fs) const;
+  void printReport() const;
 
   // accessors
   inline int boxsize() const { return priv_boxsize; }
@@ -60,7 +61,7 @@ public:
   void patches(std::vector<imagePatch>& new_patches);
   void shifts(std::vector<cv::Mat1f>& new_shifts);
 
-  void clearBoxsizeEtc();
+  void clearRefimgEtc();
   void clearPatchesEtc();
   void clearShiftsEtc();
 
