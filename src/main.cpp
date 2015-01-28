@@ -89,6 +89,16 @@ int main(const int argc, const char *argv[]) {
     context.clearRefimgEtc();
   }
 
+  // Check for consistency of crop settings and ensure that we have a properly
+  // sized reference image.
+  if (context.refimgValid() && context.commonRectangleValid()) {
+    if ((params.crop && context.refimg().size() != context.commonRectangle().size()) ||
+        (!params.crop && context.refimg().size() != context.imagesize())) {
+      std::cerr << "Reference image size not consistent with crop options\n";
+      context.clearRefimgEtc();
+    }
+  }
+
   // reference image
   Mat rawRef;
   if (params.stage_refimg || params.only_refimg ||
