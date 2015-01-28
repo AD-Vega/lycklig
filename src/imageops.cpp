@@ -376,8 +376,7 @@ Mat lucky(const registrationParams& params,
     if (params.crop && context.commonRectangleValid())
       finalsum = Mat::zeros(context.commonRectangle().size() * params.supersampling, CV_32FC3);
     else {
-      Mat sample = magickImread(context.images().at(0).filename);
-      finalsum = Mat::zeros(sample.size() * params.supersampling, CV_32FC3);
+      finalsum = Mat::zeros(context.imagesize() * params.supersampling, CV_32FC3);
     }
   }
 

@@ -65,6 +65,12 @@ int main(const int argc, const char *argv[]) {
       images.push_back(inputImage(file));
     context.images(images);
     std::cerr << context.images().size() << " input files listed on command line\n";
+    auto sampleFile = images.at(0).filename;
+    std::cerr << "Probing '" << sampleFile << "' for size... ";
+    Mat sample = magickImread(sampleFile);
+    context.imagesize(sample.size());
+    std::cerr << context.imagesize().width << "x"
+              << context.imagesize().height << "\n";
   }
 
   // preregistration stage

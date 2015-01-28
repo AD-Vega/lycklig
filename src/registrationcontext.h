@@ -45,6 +45,7 @@ public:
   void printReport() const;
 
   // accessors
+  inline cv::Size imagesize() const { return priv_imagesize; }
   inline int boxsize() const { return priv_boxsize; }
   inline std::vector<inputImage>& images() { return priv_images; }
   inline const std::vector<inputImage>& images() const { return priv_images; }
@@ -54,6 +55,7 @@ public:
   inline const std::vector<cv::Mat1f>& shifts() const { return priv_shifts; }
 
   // modificators
+  void imagesize(cv::Size new_size);
   void boxsize(int new_boxsize);
   void images(std::vector<inputImage>& new_images);
   void commonRectangle(cv::Rect new_commonRectangle);
@@ -66,6 +68,7 @@ public:
   void clearShiftsEtc();
 
   // checks
+  inline bool imagesizeValid() const { return imagesize_valid; }
   inline bool boxsizeValid() const { return boxsize_valid; }
   inline bool imagesValid() const { return images_valid; }
   inline bool commonRectangleValid() const { return commonRectangle_valid; }
@@ -74,6 +77,9 @@ public:
   inline bool shiftsValid() const { return shifts_valid; }
 
 private:
+  cv::Size priv_imagesize;
+  bool imagesize_valid = false;
+
   int priv_boxsize = 0;
   bool boxsize_valid = false;
 

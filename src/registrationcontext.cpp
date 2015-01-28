@@ -44,6 +44,11 @@ void write(cv::FileStorage& fs, const std::string&, const inputImage& image) {
 
 
 registrationContext::registrationContext(const cv::FileStorage& fs) {
+  if (!fs["imagesize"].empty()) {
+    fs["imagesize"] >> priv_imagesize;
+    imagesize_valid = true;
+  }
+
   if (fs["boxsize"].isInt()) {
     fs["boxsize"] >> priv_boxsize;
     boxsize_valid = true;
@@ -79,6 +84,11 @@ registrationContext::registrationContext(const cv::FileStorage& fs) {
     }
     shifts_valid = true;
   }
+}
+
+void registrationContext::imagesize(cv::Size new_imagesize) {
+  priv_imagesize= new_imagesize;
+  imagesize_valid = true;
 }
 
 void registrationContext::boxsize(int new_boxsize) {
@@ -157,6 +167,8 @@ void write(cv::FileStorage& fs,
 }
 
 void registrationContext::write(cv::FileStorage& fs) const {
+  if (imagesize_valid)
+    fs << "imagesize" << priv_imagesize;
   if (boxsize_valid)
     fs << "boxsize" << priv_boxsize;
   if (images_valid)
@@ -179,7 +191,8 @@ void write(cv::FileStorage& fs,
 
 void registrationContext::printReport() const {
   if (images_valid)
-    std::cerr << "  * " << images().size() << " images\n";
+    std::cerr << "  * " << images().size() << " images ("
+      << imagesize().width << "x" << imagesize().height << ")\n";
   if (commonRectangle_valid)
     std::cerr << "  * global registration data\n";
   if (refimg_valid)
