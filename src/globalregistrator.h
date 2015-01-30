@@ -23,38 +23,21 @@
 #include "registrationparams.h"
 #include "registrationcontext.h"
 
-class globalRegistration {
-public:
-  bool valid = false;
-  std::vector<cv::Point> shifts;
-  cv::Rect crop;
-
-  void calculateOptimalCrop(const cv::Size& size);
-};
-
-
+// globalRegistrator is a tool that initially takes a template image and can
+// then sequentially register any number of images against that template. The
+// class should not be used directly because of its non-thread-safeness, but
+// rather via the static method getGlobalShifts() that performs a parallelized
+// registration of multiple images.
 class globalRegistrator {
 public:
   globalRegistrator(const cv::Mat& reference, const int maxmove);
 
-  // Parallelized static method that registers a set of images.
-  static void getGlobalShifts(const registrationParams& params,
-                              registrationContext& context,
-                              const cv::Mat& refimg,
-                              bool showProgress);
-
 private:
   // Not thread safe.
   // Each thread needs to have its own instance of globalRegistrator in order
-  // to call this method.
+  // to call this method. See getGlobalShifts().
   cv::Point findShift(const cv::Mat& img);
 
-friend void getGlobalShifts(const registrationParams& params,
-                            registrationContext& context,
-                            const cv::Mat& refimg,
-                            const bool showProgress);
-
-private:
   cv::Mat1f refImgWithBorder;
   cv::Mat1f refImageArea;
   cv::Mat1f searchMask;
@@ -63,6 +46,14 @@ private:
   cv::Mat1f cor;
   cv::Mat1f match;
   cv::Point originShift;
+
+public:
+  // Parallelized static method that registers a set of images and stores
+  // the results into the registration context.
+  static void getGlobalShifts(const registrationParams& params,
+                              registrationContext& context,
+                              const cv::Mat& refimg,
+                              bool showProgress);
 };
 
 #endif // GLOBALREGISTRATOR_H
