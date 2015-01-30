@@ -24,4 +24,12 @@ add_executable(lycklig ${lycklig_SRCS})
 target_link_libraries(lycklig ${OpenCV_LIBS} ${PKGCONFS_LDFLAGS})
 
 install(TARGETS lycklig RUNTIME DESTINATION bin)
-install(PROGRAMS kinky/kinky.py DESTINATION bin RENAME kinky)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/kinky/kinky.py
+               ${CMAKE_CURRENT_BINARY_DIR}/kinky
+               @ONLY)
+install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/kinky DESTINATION bin)
+install(FILES kinky/kinky.desktop
+  DESTINATION share/applications/)
+install(FILES kinky/kinky.svgz
+  RENAME application-x-kinky.svgz
+  DESTINATION share/icons/)

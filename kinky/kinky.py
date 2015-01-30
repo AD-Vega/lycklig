@@ -19,7 +19,8 @@
 
 from PyQt4.QtGui import QApplication, QGraphicsView, QGraphicsScene, QPixmap, QImage, \
     QGridLayout, QVBoxLayout, QHBoxLayout, QStackedLayout, QLabel, QWidget, \
-    QPalette, QFileDialog, QMessageBox, QTransform, QTextDocument, QMouseEvent, qRgb
+    QPalette, QFileDialog, QMessageBox, QTransform, QTextDocument, QMouseEvent, qRgb, \
+    QIcon
 from PyQt4.QtCore import Qt, QEvent, QPoint, QTimer, QSize, QThread
 from base64 import b64decode, b64encode
 from scipy import ndimage
@@ -43,6 +44,14 @@ _σ_noise_default = 0.1
 _zoom = 1.1
 
 _colorTable = [ qRgb(i, i, i) for i in range(0, 256) ]
+
+_iconPath = "@CMAKE_INSTALL_PREFIX@/share/icons/application-x-kinky.svgz"
+if (os.path.isfile(_iconPath)):
+    _icon = QIcon(_iconPath)
+else:
+    _idir = os.path.dirname(os.path.realpath(sys.argv[0]))
+    _icon = QIcon(_idir + "/kinky.svgz")
+    del _idir
 
 def numpy2QImage(arrayImage):
     """Normalize a numpy ndarray and convert it into a QImage. It will return
@@ -261,6 +270,7 @@ class ImageEnhancer(QGraphicsView):
         self.setDragMode(QGraphicsView.ScrollHandDrag)
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
         self.setWindowTitle("Kinky: " + imagefile)
+        self.setWindowIcon(_icon)
 
         # Prepare the overlay display widgets
         mainlayout = QStackedLayout()

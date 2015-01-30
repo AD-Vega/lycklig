@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=kinky
+Icon=application-x-kinky
+TryExec=kinky
+Exec=kinky
+Terminal=false
+Categories=Science;Astronomy;ImageProcessing;Qt
+Comment=Kinky: the wavy image enhancer
+GenericName=Image processing
