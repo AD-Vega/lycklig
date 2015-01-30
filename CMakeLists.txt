@@ -24,3 +24,4 @@ add_executable(lycklig ${lycklig_SRCS})
 target_link_libraries(lycklig ${OpenCV_LIBS} ${PKGCONFS_LDFLAGS})
 
 install(TARGETS lycklig RUNTIME DESTINATION bin)
+install(PROGRAMS kinky/kinky.py DESTINATION bin RENAME kinky)
