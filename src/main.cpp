@@ -167,9 +167,10 @@ int main(const int argc, const char *argv[]) {
 
     Mat finalsum = lucky(params, context, true);
     // Only save the result if there is something to save.
-    if (params.stage_stack)
+    if (params.stage_stack) {
       std::cerr << "Saving output to '" << params.output_file << "'\n";
       imwrite(params.output_file, normalizeTo16Bits(finalsum));
+    }
   }
 
   if (!params.save_state_file.empty()) {
