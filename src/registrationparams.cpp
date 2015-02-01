@@ -155,8 +155,13 @@ bool registrationParams::parse(const int argc, const char* argv[])
         return false;
       }
     }
-    else
+    else {
       files = arg_files.getValue();
+      if (files.size() == 0) {
+        std::cerr << "ERROR: No input files given\n";
+        return false;
+      }
+    }
 
     if (arg_save_state.isSet()) {
       save_state_file = arg_save_state.getValue();
