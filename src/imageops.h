@@ -24,12 +24,8 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <string>
 #include <Magick++.h>
-#include "imagepatch.h"
 #include "registrationparams.h"
 #include "registrationcontext.h"
-#include "rbfwarper.h"
-
-class globalRegistration;
 
 class grayReader {
 public:
@@ -38,42 +34,6 @@ public:
 
 private:
   cv::Mat1f imggray;
-};
-
-class patchMatcher {
-public:
-  cv::Mat1f match(const cv::Mat1f& img,
-                  const imagePatch& patch,
-                  const float multiplier);
-
-private:
-  cv::Mat1f mask;
-  cv::Mat1f areasq;
-  cv::Mat1f cor;
-};
-
-class quadraticFit {
-public:
-  quadraticFit(const cv::Mat& data, const cv::Point& point);
-  cv::Point2f minimum() const;
-  // The smaller of the two eigenvalues.
-  float smallerEig() const;
-  // The larger of the two eigenvalues.
-  float largerEig() const;
-  // Eigenvector corresponding to the smaller eigenvalue.
-  cv::Point2f smallerEigVec() const;
-  // Eigenvector corresponding to the larger eigenvalue.
-  cv::Point2f largerEigVec() const;
-
-private:
-  // A matrix of x^2, x*y and y^2 for the quadratic fit.
-  static cv::Mat1f fitx;
-  // Location of the minimum of the best matching quadratic function.
-  cv::Mat x0y0;
-  // The Hessian (divided by two).
-  cv::Mat H;
-  cv::Mat eigenvalues;
-  cv::Mat eigenvectors;
 };
 
 cv::Mat magickImread(const std::string& filename);
@@ -85,18 +45,6 @@ void linearRGB2sRGB(cv::Mat& img);
 cv::Mat meanimg(const registrationParams& params,
                 const registrationContext& context,
                 const bool showProgress = false);
-
-std::vector<imagePatch> selectPointsHex(const registrationParams& params,
-                                        const registrationContext& context);
-
-std::vector<imagePatch> filterPatchesByQuality(const std::vector<imagePatch>& patches,
-                                               const cv::Mat& refimg);
-
-cv::Mat drawPoints(const cv::Mat& img, const std::vector<imagePatch>& patches);
-
-cv::Mat lucky(const registrationParams& params,
-              registrationContext& context,
-              const bool showProgress = false);
 
 cv::Mat normalizeTo16Bits(const cv::Mat& inputImg);
 
