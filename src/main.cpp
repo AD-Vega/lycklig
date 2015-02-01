@@ -90,16 +90,6 @@ int main(const int argc, const char *argv[]) {
     context.clearRefimgEtc();
   }
 
-  // Check for consistency of crop settings and ensure that we have a properly
-  // sized reference image.
-  if (context.refimgValid() && context.commonRectangleValid()) {
-    if ((params.crop && context.refimg().size() != context.commonRectangle().size()) ||
-        (!params.crop && context.refimg().size() != context.imagesize())) {
-      std::cerr << "Reference image size not consistent with crop options\n";
-      context.clearRefimgEtc();
-    }
-  }
-
   // reference image
   Mat rawRef;
   if (params.stage_refimg || params.only_refimg ||
@@ -108,12 +98,21 @@ int main(const int argc, const char *argv[]) {
     // This creates a color image. See below for implications.
     rawRef = meanimg(params, context, true);
   }
+
   if (params.only_refimg) {
     std::cerr << "Saving quick stack into '"
               << params.output_file << "'\n";
+
+    Mat outputImage = rawRef;
+    if (context.commonRectangleValid() && params.crop)
+    {
+      // save only the region that is common to all input images
+      outputImage = rawRef(context.commonRectangle());
+    }
     // This saves the color image.
-    imwrite(params.output_file, normalizeTo16Bits(rawRef));
+    imwrite(params.output_file, normalizeTo16Bits(outputImage));
   }
+
   // From now on, we will only store a black&white version of the reference
   // image. Pushing a new reference image into the registration context
   // means invalidating any further data (registration points, lucky imaging
@@ -142,11 +141,26 @@ int main(const int argc, const char *argv[]) {
     context.clearPatchesEtc();
   }
 
+  // Where to create the registration points.
+  Rect patchCreationArea = context.refimgRectangle();
+  if (params.crop && context.commonRectangleValid())
+    patchCreationArea = context.commonRectangle();
+
+  // If we have the registration points already, check that they were created
+  // with the same crop option.
+  if (need_patches && context.patchesValid() &&
+      patchCreationArea != context.patches().patchCreationArea)
+  {
+    std::cerr << "Existing registration points were created with different crop settings\n";
+    context.clearPatchesEtc();
+  }
+
   // lucky imaging registration points
   if (params.stage_patches || (need_patches && !context.patchesValid())) {
     context.boxsize(params.boxsize);
+
     std::cerr << "Lucky imaging: creating registration patches\n";
-    auto patches = selectPointsHex(params, context);
+    auto patches = selectPointsHex(params, context, patchCreationArea);
     patches = filterPatchesByQuality(patches, context.refimg());
     context.patches(patches);
     std::cerr << context.patches().size() << " valid patches\n";

@@ -70,9 +70,10 @@ registrationContext::registrationContext(const cv::FileStorage& fs) {
     images_valid = true;
   }
 
-  if (fs["patches"].isSeq()) {
+  if (fs["patches"].isSeq() && ! fs["patchCreationArea"].empty()) {
     for (const auto& i : fs["patches"])
       priv_patches.push_back(imagePatch(priv_refimg, imagePatchPosition(i), priv_boxsize));
+    fs["patchCreationArea"] >> priv_patches.patchCreationArea;
     patches_valid = true;
   }
 
@@ -135,7 +136,7 @@ void registrationContext::clearPatchesEtc() {
     std::cerr << "  Invalidating existing registration points\n";
   priv_boxsize = 0;
   boxsize_valid = false;
-  priv_patches.clear();
+  priv_patches.invalidate();
   patches_valid = false;
   clearShiftsEtc();
 }
@@ -164,6 +165,7 @@ void write(cv::FileStorage& fs,
   for (auto& patch : patches)
     fs << patch;
   fs << "]";
+  fs << "patchCreationArea" << patches.patchCreationArea;
 }
 
 void registrationContext::write(cv::FileStorage& fs) const {

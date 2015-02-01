@@ -73,6 +73,13 @@ imagePatch::imagePatch(cv::Mat img, int xpos, int ypos, int boxsize, cv::Rect se
   imagePatch(img, imagePatchPosition(xpos, ypos, search), boxsize) {}
 
 
+void patchCollection::invalidate()
+{
+  std::vector<imagePatch>::clear();
+  patchCreationArea = cv::Rect(0, 0, 0, 0);
+}
+
+
 cv::Rect patchCollection::searchAreaForImage(const cv::Rect imageRect) const
 {
   cv::Rect totalRect(imageRect);

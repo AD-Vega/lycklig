@@ -48,4 +48,14 @@ cv::Mat meanimg(const registrationParams& params,
 
 cv::Mat normalizeTo16Bits(const cv::Mat& inputImg);
 
+class imageSumLookup
+{
+public:
+  imageSumLookup(const cv::Mat& img);
+  float lookup(const cv::Rect rect) const;
+
+private:
+  cv::Mat table;
+};
+
 #endif // IMAGEOPS_H

@@ -62,7 +62,8 @@ private:
 
 
 patchCollection selectPointsHex(const registrationParams& params,
-                                const registrationContext& context);
+                                const registrationContext& context,
+                                const cv::Rect patchCreationArea);
 
 patchCollection filterPatchesByQuality(const patchCollection& patches,
                                        const cv::Mat& refimg);

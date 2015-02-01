@@ -76,6 +76,10 @@ public:
   inline bool patchesValid() const { return patches_valid; }
   inline bool shiftsValid() const { return shifts_valid; }
 
+  // convenience methods
+  inline cv::Rect refimgRectangle() const
+    { return cv::Rect(cv::Point(0, 0), priv_refimg.size()); }
+
 private:
   cv::Size priv_imagesize;
   bool imagesize_valid = false;

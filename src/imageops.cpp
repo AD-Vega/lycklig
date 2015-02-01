@@ -83,12 +83,7 @@ Mat meanimg(const registrationParams& params,
 
   Mat sample = magickImread(images.at(0).filename);
   Rect imgRect(Point(0, 0), sample.size());
-
-  Mat imgmean;
-  if (params.crop && context.commonRectangleValid())
-    imgmean = Mat::zeros(context.commonRectangle().size(), CV_MAKETYPE(CV_32F, sample.channels()));
-  else
-    imgmean = Mat::zeros(sample.size(), CV_MAKETYPE(CV_32F, sample.channels()));
+  Mat imgmean = Mat::zeros(sample.size(), CV_MAKETYPE(CV_32F, sample.channels()));
 
   int progress = 0;
   if (showProgress)
@@ -102,14 +97,11 @@ Mat meanimg(const registrationParams& params,
       auto image = images.at(i);
       Mat data = magickImread(image.filename);
 
-      if (context.commonRectangleValid()) {
-        if (params.crop)
-          accumulate(data(context.commonRectangle() + image.globalShift), localsum);
-        else {
-          Rect sourceRoi = (imgRect + image.globalShift) & imgRect;
-          Rect destRoi = sourceRoi - image.globalShift;
-          accumulate(data(sourceRoi), localsum(destRoi));
-        }
+      if (image.globalShift != Point(0, 0)) {
+        // TODO: normalization mask
+        Rect sourceRoi = (imgRect + image.globalShift) & imgRect;
+        Rect destRoi = sourceRoi - image.globalShift;
+        accumulate(data(sourceRoi), localsum(destRoi));
       }
       else
         accumulate(data, localsum);
@@ -139,4 +131,47 @@ Mat normalizeTo16Bits(const Mat& inputImg) {
   Mat imgout;
   img.convertTo(imgout, CV_16UC3);
   return imgout;
+}
+
+
+imageSumLookup::imageSumLookup(const Mat& img) :
+  table(img.size() + cv::Size(1,1), img.type())
+{
+  table.row(0) = Scalar(0);
+  table.col(0) = Scalar(0);
+  img.copyTo(table(cv::Rect(Point(1, 1), img.size())));
+
+  for(int row = 2; row < table.rows; row++)
+  {
+    float* prevptr = table.ptr<float>(row-1);
+    float* ptr = table.ptr<float>(row);
+    for (int x = 0; x < table.cols; x++)
+    {
+      *ptr += *prevptr;
+      prevptr++;
+      ptr++;
+    }
+  }
+
+  for(int row = 1; row < table.rows; row++)
+  {
+    float* ptr = table.ptr<float>(row);
+    float* nextptr = ptr + 1;
+    for (int x = 1; x < table.cols; x++)
+    {
+      *nextptr += *ptr;
+      ptr++;
+      nextptr++;
+    }
+  }
+}
+
+
+float imageSumLookup::lookup(const Rect rect) const
+{
+  return
+      table.at<float>(rect.x + rect.width, rect.y + rect.height)
+    + table.at<float>(rect.x, rect.y)
+    - table.at<float>(rect.x + rect.width, rect.y)
+    - table.at<float>(rect.x, rect.y + rect.height);
 }

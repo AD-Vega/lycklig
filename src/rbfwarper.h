@@ -24,10 +24,12 @@
 class rbfWarper {
 public:
   rbfWarper(const patchCollection& patches,
-            const cv::Size& imagesize,
+            const cv::Rect& targetRect,
             const float sigma,
             const int supersampling = 1);
-  cv::Mat warp(const cv::Mat& image, const cv::Mat1f& shifts) const;
+  cv::Mat warp(const cv::Mat& image,
+               const cv::Point& globalShift,
+               const cv::Mat1f& shifts) const;
 
 private:
   void gauss1d(float* ptr, const cv::Range& range, const float sigma);
@@ -36,6 +38,7 @@ private:
 
 private:
   const patchCollection& patches;
+  const cv::Point targetOrigin;
   const cv::Size imagesize;
   const float sigma;
   const int supersampling;

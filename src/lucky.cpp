@@ -22,10 +22,12 @@
 using namespace cv;
 
 patchCollection selectPointsHex(const registrationParams& params,
-                                const registrationContext& context) {
+                                const registrationContext& context,
+                                const cv::Rect patchCreationArea)
+{
   const auto& refimg = context.refimg();
   patchCollection patches;
-  Rect imgrect(Point(0, 0), refimg.size());
+  patches.patchCreationArea = patchCreationArea;
   const int boxsize = context.boxsize();
 
   // We set maximum displacement to maxmove+1: the 1px border is used as a
@@ -37,14 +39,17 @@ patchCollection selectPointsHex(const registrationParams& params,
 
   // Points are arranged in a hexagonal grid. Each point is chosen sufficiently
   // far from the borders so that the search area (maxb in both directions)
-  // is fully contained in the reference image.
+  // is fully contained within patchCreationArea.
   const int xydiff = boxsize/2;
   int yspacing = ceil(xydiff*sqrt(0.75));
   const int xshift = xydiff/2;
   int period = 0;
-  for (int y = maxmb; y <= refimg.rows - boxsize - maxmb; y += yspacing, period++) {
+  for (int y = maxmb;
+       y <= patchCreationArea.height - boxsize - maxmb;
+       y += yspacing, period++)
+    {
     for (int x = maxmb + (period % 2 ? xshift : 0);
-         x <= refimg.cols - boxsize - maxmb;
+         x <= patchCreationArea.width - boxsize - maxmb;
          x += xydiff) {
       Rect searchArea(Point(x-maxmb, y-maxmb), Point(x+boxsize+maxmb, y+boxsize+maxmb));
       imagePatch p(refimg, x, y, boxsize, searchArea);
@@ -150,6 +155,7 @@ patchCollection filterPatchesByQuality(const patchCollection& patches,
                                        const Mat& refimg) {
   // Patches that are good enough will be returned in this vector.
   patchCollection newPatches;
+  newPatches.patchCreationArea = patches.patchCreationArea;
 
   patchMatcher matcher;
   for (auto& patch : patches) {
@@ -182,7 +188,7 @@ patchCollection filterPatchesByQuality(const patchCollection& patches,
 Mat drawPoints(const Mat& img, const patchCollection& patches) {
   Mat out = img.clone();
   for (auto& patch : patches) {
-     circle(out, Point(patch.xcenter(), patch.ycenter()), 2, Scalar(0, 0, 255));
+     circle(out, patch.center(), 2, Scalar(0, 0, 255));
      rectangle(out, Rect(patch.x, patch.y, patch.image.cols, patch.image.rows), Scalar(0, 255, 0));
   }
   return out;
@@ -242,15 +248,21 @@ Mat1f findShifts(const Mat& img,
 //
 Mat lucky(const registrationParams& params,
           registrationContext& context,
-          const bool showProgress) {
-  // LUCKY IMAGING: initialization
+          const bool showProgress)
+{
+  Rect outputRectangle = context.refimgRectangle();
+  if (params.crop && context.commonRectangleValid())
+    outputRectangle = context.commonRectangle();
+
   // These initializations are relatively cheap and can be performed even
   // if we are only going to do stacking.
-  const auto& refimg = context.refimg();
-  const float refimgsq = sum(refimg.mul(refimg))[0];
+  const Mat& refimg = context.refimg();
+  const imageSumLookup refsqLookup(refimg.mul(refimg));
+
   // rbfWarper can be harmlessly constructed with an empty patch list, but
   // should then not be used.
-  rbfWarper rbf(context.patches(), refimg.size(), context.boxsize()/4, params.supersampling);
+  rbfWarper rbf(context.patches(), outputRectangle,
+                context.boxsize()/4, params.supersampling);
 
   std::vector<Mat1f> allShifts;
   if (params.stage_lucky) {
@@ -263,14 +275,7 @@ Mat lucky(const registrationParams& params,
   }
 
   // STACKING: initialization
-  Mat finalsum;
-  if (params.stage_stack) {
-    if (params.crop && context.commonRectangleValid())
-      finalsum = Mat::zeros(context.commonRectangle().size() * params.supersampling, CV_32FC3);
-    else {
-      finalsum = Mat::zeros(context.imagesize() * params.supersampling, CV_32FC3);
-    }
-  }
+  Mat finalsum = Mat::zeros(outputRectangle.size() * params.supersampling, CV_32FC3);
 
   int progress = 0;
   if (showProgress)
@@ -290,24 +295,32 @@ Mat lucky(const registrationParams& params,
       // common step: load an image
       const auto& image = context.images().at(ifile);
       Mat imgcolor = magickImread(image.filename);
-      if (context.commonRectangleValid()) {
-        if (params.crop)
-          imgcolor = imgcolor(context.commonRectangle() + image.globalShift);
-        else {
-          Mat tmp = Mat::zeros(imgcolor.size(), imgcolor.type());
-          Rect imgRect(Point(0, 0), imgcolor.size());
-          Rect sourceRoi = (imgRect + image.globalShift) & imgRect;
-          Rect destRoi = sourceRoi - image.globalShift;
-          imgcolor(sourceRoi).copyTo(tmp(destRoi));
-          imgcolor = tmp;
-        }
-      }
 
       // LUCKY IMAGING: main operation
       if (params.stage_lucky) {
         Mat1f img;
         cvtColor(imgcolor, img, CV_BGR2GRAY);
-        const float multiplier = sum(img.mul(refimg))[0] / refimgsq;
+
+        // Image rectangle, expressed in coordinate systems of image itself
+        // and the reference image.
+        Rect img_coordImg(Point(0, 0), img.size());
+        Rect img_coordRefimg = img_coordImg - image.globalShift;
+        // Overlap between img and refimg, again according to both coordinate
+        // systems.
+        Rect overlap_coordRefimg = context.refimgRectangle() & img_coordRefimg;
+        Rect overlap_coordImg = overlap_coordRefimg + image.globalShift;
+
+        // Calculate optimal multiplier for img vs. refimg.
+        Mat imgOverlap(img, overlap_coordImg);
+        const float multiplier = sum(imgOverlap.mul(imgOverlap))[0] /
+                                 refsqLookup.lookup(overlap_coordRefimg);
+
+        // Pad the image.
+        Mat tmp = Mat::zeros(refimg.size(), refimg.type());
+        imgOverlap.copyTo(tmp(overlap_coordRefimg));
+        img = tmp;
+
+        // Find lucky imaging shifts.
         Mat1f shifts(findShifts(img, context.patches(), multiplier, matcher));
         allShifts.at(ifile) = shifts;
       }
@@ -315,7 +328,7 @@ Mat lucky(const registrationParams& params,
       // STACKING: main operation
       if (params.stage_stack) {
         if (params.stage_lucky || context.shiftsValid())
-          localsum += rbf.warp(imgcolor, allShifts.at(ifile));
+          localsum += rbf.warp(imgcolor, image.globalShift, allShifts.at(ifile));
         else
           // FIXME: this does not work with supersampling yet. For that to work,
           // an interpolator is needed that will handle both global registration

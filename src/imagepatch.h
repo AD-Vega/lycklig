@@ -45,8 +45,8 @@ public:
   imagePatch(cv::Mat img, imagePatchPosition position, int boxsize);
   imagePatch(cv::Mat img, int xpos, int ypos, int boxsize, cv::Rect search);
 
-  inline int xcenter() const { return x + image.cols/2; }
-  inline int ycenter() const { return y + image.rows/2; }
+  inline cv::Point center() const
+    { return cv::Point(x + image.cols/2, y + image.rows/2); }
   inline int matchShiftx() const { return x - searchArea.x; }
   inline int matchShifty() const { return y - searchArea.y; }
 
@@ -63,6 +63,10 @@ public:
   // are applicable to the image of a given size and position (imageRect).
   // The returned rectangle is never smaller than the image itself.
    cv::Rect searchAreaForImage(const cv::Rect imageRect) const;
+   void invalidate();
+
+   // Area of the reference image on which the patches were collected.
+   cv::Rect patchCreationArea = cv::Rect(0, 0, 0, 0);
 };
 
 #endif // IMAGEPATCH_H
