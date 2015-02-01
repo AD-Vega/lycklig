@@ -48,6 +48,20 @@ void write(cv::FileStorage& fs,
 }
 
 
+bool imagePatchPosition::searchAreaWithin(const cv::Rect rect) const
+{
+  return rect.contains(searchArea.tl()) &&
+         rect.contains(searchArea.br() - cv::Point(1, 1));
+}
+
+
+bool imagePatchPosition::searchAreaOverlaps(const cv::Rect rect) const
+{
+  return rect.contains(searchArea.tl()) ||
+         rect.contains(searchArea.br() - cv::Point(1, 1));
+}
+
+
 imagePatch::imagePatch(cv::Mat img, imagePatchPosition position, int boxsize) :
   imagePatchPosition(position),
   image(img(cv::Rect((int)position.x, (int)position.y, boxsize, boxsize))),
@@ -57,3 +71,16 @@ imagePatch::imagePatch(cv::Mat img, imagePatchPosition position, int boxsize) :
 
 imagePatch::imagePatch(cv::Mat img, int xpos, int ypos, int boxsize, cv::Rect search) :
   imagePatch(img, imagePatchPosition(xpos, ypos, search), boxsize) {}
+
+
+cv::Rect patchCollection::searchAreaForImage(const cv::Rect imageRect) const
+{
+  cv::Rect totalRect(imageRect);
+
+  for (const auto& patch : *this)
+  {
+    if (patch.searchAreaOverlaps(imageRect))
+      totalRect |= patch.searchArea;
+  }
+  return totalRect;
+}

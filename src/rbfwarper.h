@@ -23,7 +23,7 @@
 
 class rbfWarper {
 public:
-  rbfWarper(const std::vector<imagePatch>& patches,
+  rbfWarper(const patchCollection& patches,
             const cv::Size& imagesize,
             const float sigma,
             const int supersampling = 1);
@@ -35,7 +35,7 @@ private:
   void prepareCoeffs();
 
 private:
-  const std::vector<imagePatch>& patches;
+  const patchCollection& patches;
   const cv::Size imagesize;
   const float sigma;
   const int supersampling;

@@ -27,6 +27,8 @@ public:
   imagePatchPosition(int xpos, int ypos, cv::Rect search);
   imagePatchPosition(const cv::FileNode& node);
   void write(cv::FileStorage& fs) const;
+  bool searchAreaWithin(const cv::Rect rect) const;
+  bool searchAreaOverlaps(const cv::Rect rect) const;
 
   unsigned int x;
   unsigned int y;
@@ -52,6 +54,15 @@ public:
   double sqsum;
   cookedTemplate cookedTmpl;
   cookedTemplate cookedMask;
+};
+
+
+class patchCollection : public std::vector<imagePatch> {
+public:
+  // This method returns a rectangle that contains all the search areas that
+  // are applicable to the image of a given size and position (imageRect).
+  // The returned rectangle is never smaller than the image itself.
+   cv::Rect searchAreaForImage(const cv::Rect imageRect) const;
 };
 
 #endif // IMAGEPATCH_H

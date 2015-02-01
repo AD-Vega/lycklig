@@ -21,10 +21,10 @@
 
 using namespace cv;
 
-std::vector<imagePatch> selectPointsHex(const registrationParams& params,
-                                        const registrationContext& context) {
+patchCollection selectPointsHex(const registrationParams& params,
+                                const registrationContext& context) {
   const auto& refimg = context.refimg();
-  std::vector<imagePatch> patches;
+  patchCollection patches;
   Rect imgrect(Point(0, 0), refimg.size());
   const int boxsize = context.boxsize();
 
@@ -146,10 +146,10 @@ Point2f quadraticFit::smallerEigVec() const
 // more than one point for which the match value is below this eigenvalue,
 // the patch quality is deemed insufficient and the patch is rejected.
 //
-std::vector<imagePatch> filterPatchesByQuality(const std::vector<imagePatch>& patches,
-                                               const Mat& refimg) {
+patchCollection filterPatchesByQuality(const patchCollection& patches,
+                                       const Mat& refimg) {
   // Patches that are good enough will be returned in this vector.
-  std::vector<imagePatch> newPatches;
+  patchCollection newPatches;
 
   patchMatcher matcher;
   for (auto& patch : patches) {
@@ -179,7 +179,7 @@ std::vector<imagePatch> filterPatchesByQuality(const std::vector<imagePatch>& pa
 }
 
 
-Mat drawPoints(const Mat& img, const std::vector<imagePatch>& patches) {
+Mat drawPoints(const Mat& img, const patchCollection& patches) {
   Mat out = img.clone();
   for (auto& patch : patches) {
      circle(out, Point(patch.xcenter(), patch.ycenter()), 2, Scalar(0, 0, 255));
@@ -190,7 +190,7 @@ Mat drawPoints(const Mat& img, const std::vector<imagePatch>& patches) {
 
 
 Mat1f findShifts(const Mat& img,
-                 const std::vector<imagePatch>& patches,
+                 const patchCollection& patches,
                  const float multiplier,
                  patchMatcher& matcher) {
   Mat1f shifts(patches.size(), 2);

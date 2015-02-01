@@ -111,7 +111,7 @@ void registrationContext::refimg(cv::Mat& new_refimg) {
   refimg_valid = true;
 }
 
-void registrationContext::patches(std::vector<imagePatch>& new_patches) {
+void registrationContext::patches(patchCollection& new_patches) {
   priv_patches = new_patches;
   patches_valid = true;
 }
@@ -159,7 +159,7 @@ void write(cv::FileStorage& fs,
 
 void write(cv::FileStorage& fs,
            const std::string&,
-           const std::vector<imagePatch>& patches) {
+           const patchCollection& patches) {
   fs << "[";
   for (auto& patch : patches)
     fs << patch;

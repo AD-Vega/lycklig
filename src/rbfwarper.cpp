@@ -21,7 +21,7 @@
 
 using namespace cv;
 
-rbfWarper::rbfWarper(const vector<imagePatch>& patches_,
+rbfWarper::rbfWarper(const patchCollection& patches_,
                      const Size& imagesize_,
                      const float sigma_,
                      const int supersampling_):

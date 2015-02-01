@@ -51,7 +51,7 @@ public:
   inline const std::vector<inputImage>& images() const { return priv_images; }
   inline cv::Rect commonRectangle() const { return priv_commonRectangle; }
   inline const cv::Mat& refimg() const { return priv_refimg; }
-  inline const std::vector<imagePatch>& patches() const { return priv_patches; }
+  inline const patchCollection& patches() const { return priv_patches; }
   inline const std::vector<cv::Mat1f>& shifts() const { return priv_shifts; }
 
   // modificators
@@ -60,7 +60,7 @@ public:
   void images(std::vector<inputImage>& new_images);
   void commonRectangle(cv::Rect new_commonRectangle);
   void refimg(cv::Mat& new_refimg);
-  void patches(std::vector<imagePatch>& new_patches);
+  void patches(patchCollection& new_patches);
   void shifts(std::vector<cv::Mat1f>& new_shifts);
 
   void clearRefimgEtc();
@@ -92,7 +92,7 @@ private:
   cv::Mat priv_refimg;
   bool refimg_valid = false;
 
-  std::vector<imagePatch> priv_patches;
+  patchCollection priv_patches;
   bool patches_valid = false;
 
   std::vector<cv::Mat1f> priv_shifts;

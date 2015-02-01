@@ -61,13 +61,13 @@ private:
 };
 
 
-std::vector<imagePatch> selectPointsHex(const registrationParams& params,
-                                        const registrationContext& context);
+patchCollection selectPointsHex(const registrationParams& params,
+                                const registrationContext& context);
 
-std::vector<imagePatch> filterPatchesByQuality(const std::vector<imagePatch>& patches,
-                                               const cv::Mat& refimg);
+patchCollection filterPatchesByQuality(const patchCollection& patches,
+                                       const cv::Mat& refimg);
 
-cv::Mat drawPoints(const cv::Mat& img, const std::vector<imagePatch>& patches);
+cv::Mat drawPoints(const cv::Mat& img, const patchCollection& patches);
 
 cv::Mat lucky(const registrationParams& params,
               registrationContext& context,
