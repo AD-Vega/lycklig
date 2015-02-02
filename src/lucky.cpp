@@ -28,6 +28,8 @@ patchCollection selectPointsHex(const registrationParams& params,
   const auto& refimg = context.refimg();
   patchCollection patches;
   patches.patchCreationArea = patchCreationArea;
+  int originx = patchCreationArea.x;
+  int originy = patchCreationArea.y;
   const int boxsize = context.boxsize();
 
   // We set maximum displacement to maxmove+1: the 1px border is used as a
@@ -51,8 +53,9 @@ patchCollection selectPointsHex(const registrationParams& params,
     for (int x = maxmb + (period % 2 ? xshift : 0);
          x <= patchCreationArea.width - boxsize - maxmb;
          x += xydiff) {
-      Rect searchArea(Point(x-maxmb, y-maxmb), Point(x+boxsize+maxmb, y+boxsize+maxmb));
-      imagePatch p(refimg, x, y, boxsize, searchArea);
+      Rect relativeSearchArea(Point(x-maxmb, y-maxmb), Point(x+boxsize+maxmb, y+boxsize+maxmb));
+      imagePatch p(refimg, originx + x, originy + y, boxsize,
+                   relativeSearchArea + patchCreationArea.tl());
       patches.push_back(p);
     }
   }
