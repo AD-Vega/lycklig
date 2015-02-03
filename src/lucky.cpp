@@ -212,9 +212,11 @@ Mat1f findShifts(const Mat& img,
     // Check whether the match was located in the outer 1px buffer zone
     // (i.e., whether it has exceeded the given maxmove). This usually
     // indicates an extremely questionable match and we rather leave
-    // the shift at (0,0) for this point.
-    if (coarseMin.x != 0 && coarseMin.y != 0 &&
-      coarseMin.x != match.cols - 1 && coarseMin.y != match.rows - 1) {
+    // the shift at (0,0) for this point. We also reject really pathological
+    // cases (like a whole matrix of NaNs) which are indicated by minMaxLoc
+    // reporting the minimum at (-1,-1).
+    if (coarseMin.x > 0 && coarseMin.y > 0 &&
+      coarseMin.x < match.cols - 1 && coarseMin.y < match.rows - 1) {
       // The coarse estimate seems OK; do subpixel correction now.
       subPixelMin = coarseMin;
       quadraticFit qf(match, coarseMin);
