@@ -69,7 +69,7 @@ void globalRegistrator::getGlobalShifts(const registrationParams& params,
   if (showProgress)
     std::fprintf(stderr, "\n");
 
-  Rect crop(-context.images().at(0).globalShift, refimg.size());
+  Rect crop(Point(0, 0), refimg.size());
   for (auto& image : context.images()) {
         crop &= Rect(-image.globalShift, refimg.size());
   }
