@@ -76,8 +76,7 @@ Mat grayReader::read(const string& file) {
 }
 
 
-Mat meanimg(const registrationParams& params,
-            const registrationContext& context,
+Mat meanimg(const registrationContext& context,
             const bool showProgress) {
   const auto& images = context.images();
 

@@ -96,7 +96,7 @@ int main(const int argc, const char *argv[]) {
       (need_refimg && !context.refimgValid())) {
     std::cerr << "Creating a stacked reference image\n";
     // This creates a color image. See below for implications.
-    rawRef = meanimg(params, context, true);
+    rawRef = meanimg(context, true);
   }
 
   if (params.only_refimg) {
