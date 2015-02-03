@@ -169,8 +169,8 @@ imageSumLookup::imageSumLookup(const Mat& img) :
 float imageSumLookup::lookup(const Rect rect) const
 {
   return
-      table.at<float>(rect.x + rect.width, rect.y + rect.height)
-    + table.at<float>(rect.x, rect.y)
-    - table.at<float>(rect.x + rect.width, rect.y)
-    - table.at<float>(rect.x, rect.y + rect.height);
+      table.at<float>(rect.y + rect.height, rect.x + rect.width)
+    + table.at<float>(rect.y, rect.x)
+    - table.at<float>(rect.y + rect.height, rect.x)
+    - table.at<float>(rect.y, rect.x + rect.width);
 }
