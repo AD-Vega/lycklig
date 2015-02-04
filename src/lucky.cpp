@@ -310,19 +310,34 @@ Mat lucky(const registrationParams& params,
         // and the reference image.
         Rect img_coordImg(Point(0, 0), img.size());
         Rect img_coordRefimg = img_coordImg - image.globalShift;
+
         // Overlap between img and refimg, again according to both coordinate
         // systems.
         Rect overlap_coordRefimg = context.refimgRectangle() & img_coordRefimg;
         Rect overlap_coordImg = overlap_coordRefimg + image.globalShift;
 
+        // Overlapping area to estimate the multiplier (img vs. refimg) on.
+        //
+        // FIXME: Until we have proper normalization in meanimg(), the area
+        // of refimg outside commonRectangle is not valid and we can't use it
+        // for this purpose.
+        Rect multiArea_coordRefimg = (context.commonRectangleValid() ?
+          context.commonRectangle() : context.refimgRectangle());
+        Rect multiArea_coordImg = (context.commonRectangleValid() ?
+          context.commonRectangle() + image.globalShift :
+          Rect(Point(0, 0), img.size()));
+
+        // Isolate the common valid portions of img and refimg.
+        Mat imgValidOverlap(img, multiArea_coordImg);
+        Mat refimgValidOverlap(refimg, multiArea_coordRefimg);
+
         // Calculate optimal multiplier for img vs. refimg.
-        Mat imgOverlap(img, overlap_coordImg);
-        const float multiplier = sum(imgOverlap.mul(imgOverlap))[0] /
-                                 refsqLookup.lookup(overlap_coordRefimg);
+        const float multiplier = sum(imgValidOverlap.mul(refimgValidOverlap))[0] /
+                                 refsqLookup.lookup(multiArea_coordRefimg);
 
         // Pad the image.
         Mat tmp = Mat::zeros(refimg.size(), refimg.type());
-        imgOverlap.copyTo(tmp(overlap_coordRefimg));
+        img(overlap_coordImg).copyTo(tmp(overlap_coordRefimg));
         img = tmp;
 
         // Find lucky imaging shifts.
