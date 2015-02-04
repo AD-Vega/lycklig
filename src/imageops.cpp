@@ -76,6 +76,27 @@ Mat grayReader::read(const string& file) {
 }
 
 
+void divideChannelsByMask(Mat& image, Mat& mask)
+{
+  int rows = image.rows;
+  int cols = image.cols;
+  int channels = image.channels();
+
+  if(image.isContinuous() && mask.isContinuous())
+  {
+      cols *= rows;
+      rows = 1;
+  }
+  for (int row = 0; row < rows; row++)
+  {
+    float* imgptr = image.ptr<float>(row);
+    float* normptr = mask.ptr<float>(row);
+    for (int pos = 0; pos < cols*channels; pos++)
+      imgptr[pos] /= normptr[pos/channels];
+  }
+}
+
+
 Mat meanimg(const registrationContext& context,
             const bool showProgress) {
   const auto& images = context.images();
@@ -83,6 +104,7 @@ Mat meanimg(const registrationContext& context,
   Mat sample = magickImread(images.at(0).filename);
   Rect imgRect(Point(0, 0), sample.size());
   Mat imgmean = Mat::zeros(sample.size(), CV_MAKETYPE(CV_32F, sample.channels()));
+  Mat normalizationMask = Mat::zeros(sample.size(), CV_32F);
 
   int progress = 0;
   if (showProgress)
@@ -90,20 +112,17 @@ Mat meanimg(const registrationContext& context,
   #pragma omp parallel
   {
     Mat localsum(imgmean.clone());
+    Mat localNormMask(normalizationMask.clone());
     #pragma omp barrier
     #pragma omp for
     for (int i = 0; i < (signed)images.size(); i++) {
       auto image = images.at(i);
       Mat data = magickImread(image.filename);
 
-      if (image.globalShift != Point(0, 0)) {
-        // TODO: normalization mask
-        Rect sourceRoi = (imgRect + image.globalShift) & imgRect;
-        Rect destRoi = sourceRoi - image.globalShift;
-        accumulate(data(sourceRoi), localsum(destRoi));
-      }
-      else
-        accumulate(data, localsum);
+      Rect sourceRoi = (imgRect + image.globalShift) & imgRect;
+      Rect destRoi = sourceRoi - image.globalShift;
+      accumulate(data(sourceRoi), localsum(destRoi));
+      localNormMask(destRoi) += image.globalMultiplier;
 
       if (showProgress) {
         #pragma omp critical
@@ -112,10 +131,12 @@ Mat meanimg(const registrationContext& context,
     }
     #pragma omp critical
     accumulate(localsum, imgmean);
+    accumulate(localNormMask, normalizationMask);
   }
   if (showProgress)
     std::fprintf(stderr, "\n");
-  imgmean /= images.size();
+
+  divideChannelsByMask(imgmean, normalizationMask);
   return imgmean;
 }
 

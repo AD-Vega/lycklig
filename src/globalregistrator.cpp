@@ -32,14 +32,15 @@ globalRegistrator::globalRegistrator(const Mat& reference, const int maxmove) {
 }
 
 
-Point globalRegistrator::findShift(const Mat& img)
+void globalRegistrator::findShift(inputImage& image, const Mat& pixels)
 {
-  matchTemplate(refImageArea, img.mul(img), imgsq, CV_TM_CCORR);
-  matchTemplate(refImgWithBorder, img, cor, CV_TM_CCORR);
+  matchTemplate(refImageArea, pixels.mul(pixels), imgsq, CV_TM_CCORR);
+  matchTemplate(refImgWithBorder, pixels, cor, CV_TM_CCORR);
   match = areasq - cor.mul(cor).mul(1/imgsq);
   Point minpoint;
   minMaxLoc(match, NULL, NULL, &minpoint);
-  return -(minpoint - originShift);
+  image.globalShift = -(minpoint - originShift);
+  image.globalMultiplier = cor(minpoint) / areasq(minpoint);
 }
 
 
@@ -57,8 +58,8 @@ void globalRegistrator::getGlobalShifts(const registrationParams& params,
     #pragma omp for schedule(dynamic)
     for (int ifile = 0; ifile < (signed)context.images().size(); ifile++) {
       auto& image = context.images().at(ifile);
-      Mat img(reader.read(image.filename));
-      image.globalShift = globalReg.findShift(img);
+      Mat pixels(reader.read(image.filename));
+      globalReg.findShift(image, pixels);
 
       if (showProgress) {
         #pragma omp critical

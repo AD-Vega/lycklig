@@ -20,13 +20,14 @@
 #include "registrationcontext.h"
 
 inputImage::inputImage(std::string filename_) :
-  filename(filename_), globalShift(0, 0)
+  filename(filename_), globalShift(0, 0), globalMultiplier(1)
 {}
 
 
 inputImage::inputImage(const cv::FileNode& node) {
   node["filename"] >> filename;
   node["globalShift"] >> globalShift;
+  node["globalMultiplier"] >> globalMultiplier;
 }
 
 
@@ -34,6 +35,7 @@ void inputImage::write(cv::FileStorage& fs) const {
   fs << "{"
      << "filename" << filename
      << "globalShift" << globalShift
+     << "globalMultiplier" << globalMultiplier
      << "}";
 }
 
