@@ -76,8 +76,16 @@ int main(const int argc, const char *argv[]) {
 
   // preregistration stage
   if (params.stage_prereg) {
-    if (params.prereg_img.empty())
+    if (params.prereg == registrationParams::preregType::FirstImage)
       params.prereg_img = context.images().at(0).filename;
+    else if (params.prereg == registrationParams::preregType::MiddleImage)
+    {
+      // Select the middle image if the number of images is odd or the image
+      // just before the middle if their number is even.
+      int middle = (context.images().size() + 1)/ 2 - 1;
+      params.prereg_img = context.images().at(middle).filename;
+    }
+
     Mat globalRefimg(grayReader().read(params.prereg_img));
     if (params.prereg_maxmove == 0) {
       params.prereg_maxmove = std::min(globalRefimg.rows, globalRefimg.cols)/2;

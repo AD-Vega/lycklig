@@ -51,6 +51,9 @@ bool registrationParams::parse(const int argc, const char* argv[])
     TCLAP::SwitchArg arg_prereg_on_first(
       "1", "prereg-on-first", "Preregister using the first image as the reference.", false);
     cmd.add(arg_prereg_on_first);
+    TCLAP::SwitchArg arg_prereg_on_middle(
+      "2", "prereg-on-middle", "Preregister using the middle image as the reference.", false);
+    cmd.add(arg_prereg_on_middle);
     TCLAP::ValueArg<unsigned int> arg_prereg_maxmove(
       "x", "prereg-maxmove", "Maximum displacement in pre-registering. Zero means half "
                              "of the images' smallest size; this is also the default.",
@@ -112,18 +115,24 @@ bool registrationParams::parse(const int argc, const char* argv[])
     cmd.parse(argc, argv);
 
     // stages
-    if (arg_prereg_img.isSet() + arg_prereg_on_first.isSet() > 1) {
-      std::cerr << "ERROR: arguments --prereg-img and --prereg-first are\n"
-                << "       mutually exclusive!" << std::endl;
+    if (arg_prereg_img.isSet() +
+        arg_prereg_on_first.isSet() +
+        arg_prereg_on_middle.isSet() > 1) {
+      std::cerr << "ERROR: arguments --prereg-img, --prereg-on-first and\n"
+                << "       --prereg-on-middle are mutually exclusive!" << std::endl;
       return false;
     }
     if (arg_prereg_img.isSet()) {
-      stage_prereg = true;
+      prereg = preregType::ExplicitImage;
       prereg_img = arg_prereg_img.getValue();
     }
-    else if (arg_prereg_on_first.isSet()) {
+    else if (arg_prereg_on_first.isSet())
+      prereg = preregType::FirstImage;
+    else if (arg_prereg_on_middle.isSet())
+      prereg = preregType::MiddleImage;
+
+    if (prereg != preregType::None)
       stage_prereg = true;
-    }
     stage_refimg = arg_refimg.isSet();
     stage_patches = arg_patches.isSet();
     stage_lucky = arg_lucky.isSet();
