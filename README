@@ -29,7 +29,7 @@ lycklig core requires tclap, ImageMagick and OpenCV, which must be
 version 2.4.8 or later.
 
 The kinky program requires Python version 3.3 or later, PyQt4, the
-NumPy and SciPy packages and the PythonMagick wrapper.
+NumPy and SciPy packages and the Wand python wrapper for ImageMagick.
 
 lycklig is built using CMake. If you are not familiar with CMake, refer
 to any tutorial. But for starters, run these commands from the lycklig
