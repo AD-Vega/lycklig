@@ -16,6 +16,7 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <algorithm>
 #include "imageops.h"
 #include "lucky.h"
 
@@ -181,11 +182,21 @@ patchCollection filterPatchesByQuality(const patchCollection& patches,
   patchCollection newPatches;
   newPatches.patchCreationArea = patches.patchCreationArea;
 
+  Rect refimgRect(Point(0, 0), refimg.size());
+  Rect totalArea = patches.searchAreaForImage(refimgRect);
+  int top = -std::min(totalArea.y, 0);
+  int left = -std::min(totalArea.x, 0);
+  int bottom = std::max(totalArea.br().y - refimg.rows, 0);
+  int right = std::max(totalArea.br().x - refimg.cols, 0);
+  Mat paddedRefimg;
+  copyMakeBorder(refimg, paddedRefimg, top, bottom, left, right, BORDER_CONSTANT, 0);
+  Rect paddedRect = Rect(Point(-left, -top), paddedRefimg.size());
+  refimgRect += Point(left, top);
+
   patchMatcher matcher;
   for (auto& patch : patches) {
     // perform the matching
-    Rect refimgRect(Point(0, 0), refimg.size());
-    Mat1f match = matcher.match(refimg, refimgRect, refimgRect, patch, 1.0);
+    Mat1f match = matcher.match(paddedRefimg, paddedRect, refimgRect, patch, 1.0);
 
     // Find the local neighbourhood of the central point and fit a 2D
     // quadratic polynomial to it.
