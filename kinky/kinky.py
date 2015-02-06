@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 # kinky, a wavy image enhancer
-# Copyright (C) 2014 Jure Varlec <jure.varlec@ad-vega.si>
-#                    Andrej Lajovic <andrej.lajovic@ad-vega.si>
+# Copyright (C) 2014-2015 Jure Varlec <jure.varlec@ad-vega.si>
+#                         Andrej Lajovic <andrej.lajovic@ad-vega.si>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
