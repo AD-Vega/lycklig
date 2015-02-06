@@ -151,8 +151,17 @@ int main(const int argc, const char *argv[]) {
 
   // Where to create the registration points.
   Rect patchCreationArea = context.refimgRectangle();
-  if (params.crop && context.commonRectangleValid())
-    patchCreationArea = context.commonRectangle();
+  if (params.crop && context.commonRectangleValid()) {
+    // The reference image is usually larger than commonRectangle and we can
+    // expand the patch creation area so that the reference points are placed
+    // right on the edge of commonRectangle.
+    const Rect cr = context.commonRectangle();
+    const Point halfbox(params.boxsize/2, params.boxsize/2);
+    const Rect expandedSearch(cr.tl() - halfbox, cr.br() + halfbox);
+    // But do cautiously trim the expanded rectangle so that it fits within
+    // the reference image.
+    patchCreationArea = expandedSearch & context.refimgRectangle();
+  }
 
   // If we have the registration points already, check that they were created
   // with the same crop option.

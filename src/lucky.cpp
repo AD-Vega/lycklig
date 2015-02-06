@@ -46,12 +46,12 @@ patchCollection selectPointsHex(const registrationParams& params,
   int yspacing = ceil(xydiff*sqrt(0.75));
   const int xshift = xydiff/2;
   int period = 0;
-  for (int y = maxmb;
-       y <= patchCreationArea.height - boxsize - maxmb;
+  for (int y = 0;
+       y <= patchCreationArea.height - boxsize;
        y += yspacing, period++)
     {
-    for (int x = maxmb + (period % 2 ? xshift : 0);
-         x <= patchCreationArea.width - boxsize - maxmb;
+    for (int x = (period % 2 ? xshift : 0);
+         x <= patchCreationArea.width - boxsize;
          x += xydiff) {
       Rect relativeSearchArea(Point(x-maxmb, y-maxmb), Point(x+boxsize+maxmb, y+boxsize+maxmb));
       imagePatch p(refimg, originx + x, originy + y, boxsize,
