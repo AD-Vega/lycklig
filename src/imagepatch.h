@@ -54,6 +54,7 @@ public:
   double sqsum;
   cookedTemplate cookedTmpl;
   cookedTemplate cookedMask;
+  cookedTemplate cookedSquare;
 };
 
 

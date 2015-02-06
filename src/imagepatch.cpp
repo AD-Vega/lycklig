@@ -66,7 +66,8 @@ imagePatch::imagePatch(cv::Mat img, imagePatchPosition position, int boxsize) :
   imagePatchPosition(position),
   image(img(cv::Rect((int)position.x, (int)position.y, boxsize, boxsize))),
   sqsum(sum(image.mul(image))[0]), cookedTmpl(image, position.searchArea.size()),
-  cookedMask(cv::Mat::ones(image.size(), CV_32F), position.searchArea.size()) {}
+  cookedMask(cv::Mat::ones(image.size(), CV_32F), position.searchArea.size()),
+  cookedSquare(image.mul(image), position.searchArea.size()) {}
 
 
 imagePatch::imagePatch(cv::Mat img, int xpos, int ypos, int boxsize, cv::Rect search) :

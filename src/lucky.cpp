@@ -64,14 +64,35 @@ patchCollection selectPointsHex(const registrationParams& params,
 
 
 Mat1f patchMatcher::match(const Mat1f& img,
+                          const Rect imgRect,
+                          const Rect validRect,
                           const imagePatch& patch,
                           const float multiplier)
 {
-  Mat1f roi(img, patch.searchArea);
-  patch.cookedMask.match(roi.mul(roi), areasq);
+  Mat1f roi(img, patch.searchArea - imgRect.tl());
+  patch.cookedMask.match(roi.mul(roi), roisq);
   patch.cookedTmpl.match(roi, cor);
-  Mat1f match = areasq - 2*multiplier*cor + pow(multiplier, 2)*patch.sqsum;
-  return match;
+
+  if (patch.searchAreaWithin(validRect))
+  {
+    // Search area is completely within the image. This is easy.
+    return roisq - 2*multiplier*cor + pow(multiplier, 2)*patch.sqsum;
+  }
+  else {
+    // Search area is only partially within the image. We need some more
+    // computations to handle this.
+    if (imgValidMask.size() != patch.searchArea.size())
+      imgValidMask = Mat::zeros(patch.searchArea.size(), CV_32F);
+    else
+      imgValidMask.setTo(0);
+
+    imgValidMask((patch.searchArea & validRect) - patch.searchArea.tl()) = 1;
+    patch.cookedSquare.match(imgValidMask, patchsq);
+    patch.cookedMask.match(imgValidMask, normalization);
+
+    Mat1f unn_match = roisq - 2*multiplier*cor + pow(multiplier, 2)*patchsq;
+    return unn_match.mul(1/normalization);
+  }
 }
 
 
@@ -163,7 +184,8 @@ patchCollection filterPatchesByQuality(const patchCollection& patches,
   patchMatcher matcher;
   for (auto& patch : patches) {
     // perform the matching
-    Mat1f match = matcher.match(refimg, patch, 1.0);
+    Rect refimgRect(Point(0, 0), refimg.size());
+    Mat1f match = matcher.match(refimg, refimgRect, refimgRect, patch, 1.0);
 
     // Find the local neighbourhood of the central point and fit a 2D
     // quadratic polynomial to it.
@@ -199,16 +221,27 @@ Mat drawPoints(const Mat& img, const patchCollection& patches) {
 
 
 Mat1f findShifts(const Mat& img,
+                 const Rect imgRect,
+                 const Rect validRect,
                  const patchCollection& patches,
                  const float multiplier,
                  patchMatcher& matcher) {
   Mat1f shifts(patches.size(), 2);
-  int patchNr = 0;
+  int patchNr = -1;
+
   for (auto& patch : patches) {
-    Mat1f match = matcher.match(img, patch, multiplier);
+    patchNr++;
+    if (!patch.searchAreaOverlaps(validRect)) {
+      shifts.at<float>(patchNr, 0) = 0;
+      shifts.at<float>(patchNr, 1) = 0;
+      continue;
+    }
+
+    Mat1f match = matcher.match(img, imgRect, validRect, patch, multiplier);
     Point coarseMin;
-    minMaxLoc(match, NULL, NULL, &coarseMin);
     Point2f subPixelMin(0,0);
+    minMaxLoc(match, NULL, NULL, &coarseMin);
+
     // Check whether the match was located in the outer 1px buffer zone
     // (i.e., whether it has exceeded the given maxmove). This usually
     // indicates an extremely questionable match and we rather leave
@@ -221,23 +254,25 @@ Mat1f findShifts(const Mat& img,
       subPixelMin = coarseMin;
       quadraticFit qf(match, coarseMin);
       Point2f subShift = qf.minimum();
+
       if (abs(subShift.x) > 0.5 || abs(subShift.y) > 0.5) {
         // Subpixel correction larger than 0.5 px indicates poor fit. Project
         // out the direction corresponding to the smaller eigenvalue and see
         // if that helps.
         subShift = subShift.dot(qf.largerEigVec()) * qf.largerEigVec();
+
         // Give up if the shift is still larger than 0.5 px.
         if (abs(subShift.x) > 0.5 || abs(subShift.y) > 0.5)
           subShift = Point2f(0, 0);
       }
       subPixelMin += subShift;
+
       // The shift is reported relative to the top left corner in the
       // image. Change it so that it refers to the center.
       subPixelMin -= Point2f(patch.matchShiftx(), patch.matchShifty());
     }
     shifts.at<float>(patchNr, 0) = subPixelMin.x;
     shifts.at<float>(patchNr, 1) = subPixelMin.y;
-    patchNr++;
   }
   return shifts;
 }
@@ -324,14 +359,23 @@ Mat lucky(const registrationParams& params,
         const float multiplier = sum(imgOverlap.mul(refimgOverlap))[0] /
                                  refsqLookup.lookup(overlap_coordRefimg);
 
-        // Pad the image.
-        Mat tmp = Mat::zeros(refimg.size(), refimg.type());
-        imgOverlap.copyTo(tmp(overlap_coordRefimg));
-        img = tmp;
+        // Extract the part of image needed for matching and possibly pad it.
+        Rect totalArea = context.patches().searchAreaForImage(img_coordRefimg);
+        Rect searchOverlap = totalArea & img_coordRefimg;
+        Mat imgSearchRoi(img, searchOverlap + image.globalShift);
+        if (searchOverlap == totalArea)
+          img = imgSearchRoi;
+        else {
+          Mat paddedImg = Mat::zeros(totalArea.size(), img.type());
+          Rect destinationRoi = searchOverlap - totalArea.tl();
+          imgSearchRoi.copyTo(paddedImg(destinationRoi));
+          img = paddedImg;
+        }
 
         // Find lucky imaging shifts.
-        Mat1f shifts(findShifts(img, context.patches(), multiplier, matcher));
-        allShifts.at(ifile) = shifts;
+        allShifts.at(ifile) =
+          findShifts(img, totalArea, searchOverlap, context.patches(),
+                     multiplier, matcher);
       }
 
       // STACKING: main operation
