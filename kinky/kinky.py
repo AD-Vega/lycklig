@@ -27,7 +27,8 @@ from scipy import ndimage
 from argparse import ArgumentParser, ArgumentTypeError
 from multiprocessing import Process, Pipe, Pool
 import numpy as np
-import PythonMagick
+from wand.image import Image
+from wand.sequence import Sequence
 import sys, os, math
 
 _k_enh_prec = '{:.5g}'
@@ -75,45 +76,44 @@ def numpy2QImage(arrayImage):
 def loadImage(filename):
     """Read the provided file and return the image as a numpy.ndarray of
     shape (height, width, colors)."""
-    image = PythonMagick.Image(filename)
-    depth = image.depth()
-    blob = PythonMagick.Blob()
-    # ImageMagick always makes color images ...
-    image.write(blob, 'RGB', 16)
-    rawdata = b64decode(blob.base64())
-    img = np.ndarray((image.rows(), image.columns(), 3),
-                           dtype='uint16', buffer=rawdata)
-    # ... so make them grayscale if necessary
-    if (img[:,:,0] == img[:,:,1]).all() \
-       and (img[:,:,2] == img[:,:,1]).all():
-        tmp = np.ndarray((image.rows(), image.columns(), 1), dtype='uint16')
-        tmp[:,:,0] = img[:,:,0]
-        img = tmp
-    img = img.astype('float')
-    return img, depth
+    image = Image(filename=filename)
+    width, height = image.size
+    depth = image.depth
+    if image.colorspace == 'gray':
+        channs = 1
+        fmt = 'gray'
+    else:
+        channs = 3
+        fmt = 'RGB'
+    image.depth = 16
+    img = np.ndarray((height, width, channs), dtype='uint16',
+                     buffer=image.make_blob(fmt))
+    return img.astype('float'), depth
 
-def saveImage(image, filename):
+def saveImage(img, filename):
     """Read the provided numpy.ndarray of shape (height, width, colors), convert
     it into a 16-bit integer color format and write it into the provided file. The
-    filename extension determines the file format. The image will be converted into
-    an 8-bit format if necessary."""
-    height, width, depth = image.shape
-    if depth == 3:
-        cmap = 'RGB'
+    image is always in TIFF format to ensure 16-bit depth."""
+    height, width, channs = img.shape
+    if channs == 3:
+        fmt = 'RGB'
     else:
-        cmap = 'K'
-    blob = PythonMagick.Blob()
-    u16arr = (image / image.max() * (2**16-1)).astype('uint16')
-    blob.base64(b64encode(bytes(u16arr)).decode('ascii'))
-    image = PythonMagick.Image(blob, PythonMagick.Geometry(width, height), 16, cmap)
-    if depth == 1:
-        pass
-        # TODO: use image.type( GrayscaleType ), but the enum is not
-        # exported in PythonMagick. Below commented code does nothing of value.
-        #image.quantizeColorSpace(PythonMagick.ColorspaceType.GRAYColorspace)
-        #image.quantizeColors(2**16)
-        #image.quantize()
-    image.write(filename)
+        fmt = 'gray'
+    u16arr = (img / img.max() * (2**16-1)).astype('uint16')
+    # The wand API does not allow construction from raw (unformatted)
+    # blobs, so we take the long way around.
+    image = Image(width = width, height = height, format = fmt)
+    image.width = width
+    image.height = height
+    image.format = fmt
+    image.read(blob=bytes(u16arr))
+    seq = Sequence(image)
+    image = Image(seq[-1])
+    if image.depth != 16:
+        raise Exception('Error converting numeric array to 16-bit image.')
+    blob = image.make_blob('tiff')
+    with open(filename, 'wb') as file:
+        file.write(blob)
 
 def processImage(img, k_enh, σ_enh, σ_noise):
     """Wavelet filter the provided numpy image array and return the result."""
@@ -412,9 +412,9 @@ class ImageEnhancer(QGraphicsView):
 
     def saveImage(self):
         candidate, ext = os.path.splitext(self._filename)
-        candidate = candidate + _filename_fmtstring + '.png'
+        candidate = candidate + _filename_fmtstring + '.tiff'
         candidate = candidate.format(self._k_enh, self._σ_enh, self._σ_noise)
-        namefilter = 'Image files (*.png *.tiff)'
+        namefilter = 'TIFF files (*.tiff)'
         filename = QFileDialog.getSaveFileName(self, "Save Image", candidate, namefilter)
         if len(filename) > 0:
             error = ''
