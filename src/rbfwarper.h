@@ -27,6 +27,7 @@ public:
             const cv::Rect& targetRect,
             const float sigma,
             const int supersampling = 1);
+
   cv::Mat warp(const cv::Mat& image,
                const cv::Point& globalShift,
                const cv::Mat1f& shifts) const;
@@ -34,7 +35,6 @@ public:
 private:
   void gauss1d(float* ptr, const cv::Range& range, const float sigma);
   void prepareBases();
-  void prepareCoeffs();
 
 private:
   const patchCollection& patches;

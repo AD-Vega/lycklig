@@ -45,8 +45,8 @@ public:
   imagePatch(cv::Mat img, imagePatchPosition position, int boxsize);
   imagePatch(cv::Mat img, int xpos, int ypos, int boxsize, cv::Rect search);
 
-  inline cv::Point center() const
-    { return cv::Point(x + image.cols/2, y + image.rows/2); }
+  inline cv::Point2f center() const
+    { return cv::Point2f(x + (image.cols-1)/2.0, y + (image.rows-1)/2.0); }
   inline int matchShiftx() const { return x - searchArea.x; }
   inline int matchShifty() const { return y - searchArea.y; }
 

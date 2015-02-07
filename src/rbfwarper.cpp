@@ -17,6 +17,7 @@
  */
 
 #include <opencv2/imgproc/imgproc.hpp>
+#include <limits>
 #include "rbfwarper.h"
 
 using namespace cv;
@@ -31,11 +32,6 @@ rbfWarper::rbfWarper(const patchCollection& patches_,
   bases(patches.size()), coeffs(patches.size(), patches.size()),
   xshiftbase(imagesize), yshiftbase(imagesize) {
 
-  if (patches.empty())
-    return;
-
-  prepareBases();
-  prepareCoeffs();
   for (int y = 0; y < imagesize.height; y++) {
     for (int x = 0; x < imagesize.width; x++) {
       xshiftbase.at<float>(y, x) =
@@ -44,6 +40,9 @@ rbfWarper::rbfWarper(const patchCollection& patches_,
         (2*(float)y - supersampling + 1)/(2*supersampling) + targetOrigin.y;
     }
   }
+
+  if (!patches.empty())
+    prepareBases();
 }
 
 
@@ -55,29 +54,79 @@ void rbfWarper::gauss1d(float* ptr, const Range& range, const float sigma) {
 
 
 void rbfWarper::prepareBases() {
-  Mat1f row(1, 2*imagesize.width-1);
-  gauss1d(row.ptr<float>(0), Range(-imagesize.width+1, imagesize.width), sigma);
-  Mat1f col(2*imagesize.height-1, 1);
-  gauss1d(col.ptr<float>(0), Range(-imagesize.height+1, imagesize.height), sigma);
-  Mat1f bigGauss(col*row);
-  Point gaussCenter(imagesize.width, imagesize.height);
+  Point2f targetF = Point2f(targetOrigin.x, targetOrigin.y);
 
-  for (int i = 0; i < (signed)patches.size(); i++) {
-    Point baseCenter = (patches.at(i).center() - targetOrigin) * supersampling;
-    bases.at(i) = bigGauss(Rect(gaussCenter-baseCenter, imagesize));
+  // We will create one large plane with a 2D Gaussian and then cut out
+  // portions of it to create the needed set of basis functions.
+  // First, we determine how larget the "mother" plane must be.
+  const float inf = std::numeric_limits<float>::infinity();
+  Point2f tl(inf, inf);
+  Point2f br(-inf, -inf);
+  for (auto& patch : patches) {
+    const float x = patch.center().x;
+    const float y = patch.center().y;
+    if (x < tl.x)
+      tl.x = x;
+    if (x > br.x)
+      br.x = x;
+    if (y < tl.y)
+      tl.y = y;
+    if (y > br.y)
+      br.y = y;
   }
-}
+  tl = (tl - targetF) * supersampling;
+  br = (br - targetF) * supersampling;
+  int minx = floor(tl.x);
+  int miny = floor(tl.y);
+  int maxx = ceil(br.x);
+  int maxy = ceil(br.y);
 
+  // 2D Gaussian is separable in x and y. We create it by preparing one row
+  // and one column, and then multiplying these two together.
+  Mat1f row(1, imagesize.width + maxx - minx);
+  Range rowRange(-maxx, imagesize.width - minx);
+  gauss1d(row.ptr<float>(0), rowRange, sigma);
 
-void rbfWarper::prepareCoeffs() {
-  for (int i = 0; i < (signed)bases.size(); i++) {
-    Point baseCenter = (patches.at(i).center() - targetOrigin) * supersampling;
-    coeffs.at<float>(i, i) = 1;
-    for (int j = i+1; j < (signed)bases.size(); j++) {
-      coeffs.at<float>(i, j) = coeffs.at<float>(j, i) = 
-        bases.at(j).at<float>(baseCenter);
+  Mat1f col(imagesize.height + maxy - miny, 1);
+  Range colRange(-maxy, imagesize.height - miny);
+  gauss1d(col.ptr<float>(0), colRange, sigma);
+
+  Mat1f bigGauss(col*row);
+  Point gaussCenter(maxx, maxy);
+
+  const float sigmasq = pow(sigma, 2);
+
+  // Now create the basis functions by taking cut-outs of bigGauss.
+  // In this loop, we also prepare the matrix that will be then
+  // inverted to solve the equations for the basis coefficients.
+  for (int i = 0; i < (signed)patches.size(); i++) {
+    Point baseCenter = (patches.at(i).center() - targetF) * supersampling;
+    bases.at(i) = bigGauss(Rect(gaussCenter - baseCenter, imagesize));
+
+    // Due to the way which the basis functions are constructed, the origin
+    // of the Gaussian functions always lies exactly in the center of a pixel.
+    // This location does not necessarily coincide with the center of the
+    // respective registration point. The entries in the diagonal of the
+    // matrix are therefore not exactly equal to one (although they should
+    // end up being quite close).
+    Point2f baseCenterF(baseCenter.x, baseCenter.y);
+    Point2f patchCenter = (patches.at(i).center() - targetF) * supersampling;
+    Point2f centerDiff = patchCenter - baseCenterF;
+    float centerDistSq = pow(centerDiff.x, 2) + pow(centerDiff.y, 2);
+    coeffs.at<float>(i, i) = exp(-0.5*centerDistSq/sigmasq);
+
+    // Determine the off-diagonal coefficients for the current basis function.
+    for (int j = i+1; j < (signed)patches.size(); j++) {
+      Point2f diff = patches.at(j).center() - patches.at(i).center();
+      diff *= supersampling;
+      float distanceSq = pow(diff.x, 2) + pow(diff.y, 2);
+      coeffs.at<float>(i, j) = coeffs.at<float>(j, i) =
+         exp(-0.5*distanceSq/sigmasq);
     }
   }
+  // Invert the matrix. The resulting matrix is then ready to be multiplied
+  // by a vector of lucky imaging shifts to yield the corresponding basis
+  // function weights.
   coeffs = coeffs.inv(DECOMP_CHOLESKY);
 }
 
@@ -88,10 +137,20 @@ Mat rbfWarper::warp(const Mat& image,
   Mat1f weights(coeffs * shifts);
   Mat1f xshift(xshiftbase.clone() + globalShift.x);
   Mat1f yshift(yshiftbase.clone() + globalShift.y);
+
+  // Add up the weighted basis functions. This amounts to a huge number of
+  // additions and is painfully slow. Currently, this is the undisputed
+  // bottleneck of the warp() method (and, quite possibly, of the whole
+  // program).
+  //
+  // TODO: It might be worth trying out a different approach: placing the
+  // weights directly into their respective positions in the matrix and then
+  // 2D-convolving the matrix with a 2D Gaussian.
   for (int i = 0; i < (signed)bases.size(); i++) {
     xshift += bases.at(i) * weights.at<float>(i, 0);
     yshift += bases.at(i) * weights.at<float>(i, 1);
   }
+
   Mat imremap;
   remap(image, imremap, xshift, yshift, CV_INTER_LINEAR, BORDER_REFLECT);
   return imremap;
