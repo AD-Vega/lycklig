@@ -325,7 +325,9 @@ Mat lucky(const registrationParams& params,
   // STACKING: initialization
   Mat finalsum, normalization, allOnes;
   if (params.stage_stack) {
-    finalsum = Mat::zeros(outputRectangle.size() * params.supersampling, CV_32FC3);
+    Mat sample = magickImread(context.images().at(0).filename);
+    finalsum = Mat::zeros(outputRectangle.size() * params.supersampling,
+                          CV_MAKETYPE(CV_32F, sample.channels()));
     normalization = Mat::zeros(finalsum.size(), CV_32F);
     allOnes = Mat::ones(context.imagesize(), CV_32F);
   }
@@ -341,7 +343,7 @@ Mat lucky(const registrationParams& params,
     Mat localsum;
     Mat localNormalization;
     if (params.stage_stack) {
-      localsum = Mat::zeros(finalsum.size(), CV_32FC3);
+      localsum = Mat::zeros(finalsum.size(), finalsum.type());
       localNormalization = Mat::zeros(normalization.size(), CV_32F);
     }
 
@@ -350,12 +352,15 @@ Mat lucky(const registrationParams& params,
     for (int ifile = 0; ifile < (signed)context.images().size(); ifile++) {
       // common step: load an image
       const auto& image = context.images().at(ifile);
-      Mat imgcolor = magickImread(image.filename);
+      Mat inputImage = magickImread(image.filename);
 
       // LUCKY IMAGING: main operation
       if (params.stage_lucky) {
         Mat1f img;
-        cvtColor(imgcolor, img, CV_BGR2GRAY);
+        if (inputImage.channels() > 1)
+          cvtColor(inputImage, img, CV_BGR2GRAY);
+        else
+          img = inputImage;
 
         // Image rectangle, expressed in coordinate systems of image itself
         // and the reference image.
@@ -398,7 +403,7 @@ Mat lucky(const registrationParams& params,
       if (params.stage_stack) {
           Mat warpedImg, warpedNormalization;
           std::tie(warpedImg, warpedNormalization) =
-            rbf.warp(imgcolor, allOnes, image.globalShift, allShifts.at(ifile));
+            rbf.warp(inputImage, allOnes, image.globalShift, allShifts.at(ifile));
           localsum += warpedImg;
           localNormalization += warpedNormalization;
       }

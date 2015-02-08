@@ -131,7 +131,10 @@ int main(const int argc, const char *argv[]) {
   if (params.stage_refimg || (need_refimg && !context.refimgValid())) {
     // Save the black&white reference image to context.
     Mat refimg;
-    cvtColor(rawRef, refimg, CV_BGR2GRAY);
+    if (rawRef.channels() > 1)
+      cvtColor(rawRef, refimg, CV_BGR2GRAY);
+    else
+      refimg = rawRef;
     context.refimg(refimg);
 
     // Changing the reference image invalidates lucky imaging registration

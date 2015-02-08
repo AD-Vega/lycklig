@@ -26,9 +26,18 @@ Mat magickImread(const std::string& filename)
 {
   Magick::Image image;
   image.read(filename);
-  cv::Mat output(image.rows(), image.columns(), CV_32FC3);
-  image.write(0, 0, image.columns(), image.rows(),
-                 "BGR", Magick::FloatPixel, output.data);
+  cv::Mat output;
+
+  if (image.colorSpace() == Magick::GRAYColorspace) {
+    output = cv::Mat(image.rows(), image.columns(), CV_32F);
+    image.write(0, 0, image.columns(), image.rows(),
+                "I", Magick::FloatPixel, output.data);
+  }
+  else {
+    output = cv::Mat(image.rows(), image.columns(), CV_32FC3);
+    image.write(0, 0, image.columns(), image.rows(),
+                  "BGR", Magick::FloatPixel, output.data);
+  }
   sRGB2linearRGB(output);
   return output;
 }
@@ -37,6 +46,7 @@ Mat magickImread(const std::string& filename)
 void sRGB2linearRGB(Mat& img) {
   int rows = img.rows;
   int cols = img.cols;
+  int channels = img.channels();
   if (img.isContinuous()) {
     cols *= rows;
     rows = 1;
@@ -44,7 +54,7 @@ void sRGB2linearRGB(Mat& img) {
   for(int row = 0; row < rows; row++)
   {
     float* ptr = img.ptr<float>(row);
-    for (int i = 0; i < 3*cols; i++) {
+    for (int i = 0; i < cols*channels; i++) {
       *ptr = (*ptr <= 0.04045 ? *ptr/12.92 : pow((*ptr + 0.055)/1.055, 2.4));
       ptr++;
     }
@@ -55,6 +65,7 @@ void sRGB2linearRGB(Mat& img) {
 void linearRGB2sRGB(Mat& img) {
   int rows = img.rows;
   int cols = img.cols;
+  int channels = img.channels();
   if (img.isContinuous()) {
     cols *= rows;
     rows = 1;
@@ -62,7 +73,7 @@ void linearRGB2sRGB(Mat& img) {
   for(int row = 0; row < rows; row++)
   {
     float* ptr = img.ptr<float>(row);
-    for (int i = 0; i < 3*cols; i++) {
+    for (int i = 0; i < cols*channels; i++) {
       *ptr = (*ptr <= 0.0031308 ? *ptr*12.92 : 1.055*pow(*ptr, 1/2.4) - 0.055);
       ptr++;
     }
@@ -71,8 +82,16 @@ void linearRGB2sRGB(Mat& img) {
 
 
 Mat grayReader::read(const string& file) {
-  cvtColor(magickImread(file.c_str()), imggray, CV_BGR2GRAY);
-  return imggray;
+  Mat img = magickImread(file.c_str());
+  if (img.channels() > 1) {
+    // colour image: convert to gray
+    cvtColor(img, imggray, CV_BGR2GRAY);
+    return imggray;
+  }
+  else {
+    // already gray
+    return img;
+  }
 }
 
 
@@ -149,7 +168,7 @@ Mat normalizeTo16Bits(const Mat& inputImg) {
   linearRGB2sRGB(img);
   img *= ((1<<16)-1);
   Mat imgout;
-  img.convertTo(imgout, CV_16UC3);
+  img.convertTo(imgout, CV_MAKETYPE(CV_16U, img.channels()));
   return imgout;
 }
 
