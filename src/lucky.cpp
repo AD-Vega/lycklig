@@ -309,9 +309,6 @@ Mat lucky(const registrationParams& params,
   // if we are only going to do stacking.
   const Mat& refimg = context.refimg();
   const imageSumLookup refsqLookup(refimg.mul(refimg));
-
-  // rbfWarper can be harmlessly constructed with an empty patch list, but
-  // should then not be used.
   rbfWarper rbf(context.patches(), outputRectangle,
                 context.boxsize()/4, params.supersampling);
 
@@ -326,7 +323,12 @@ Mat lucky(const registrationParams& params,
   }
 
   // STACKING: initialization
-  Mat finalsum = Mat::zeros(outputRectangle.size() * params.supersampling, CV_32FC3);
+  Mat finalsum, normalization, allOnes;
+  if (params.stage_stack) {
+    finalsum = Mat::zeros(outputRectangle.size() * params.supersampling, CV_32FC3);
+    normalization = Mat::zeros(finalsum.size(), CV_32F);
+    allOnes = Mat::ones(context.imagesize(), CV_32F);
+  }
 
   int progress = 0;
   if (showProgress)
@@ -337,8 +339,11 @@ Mat lucky(const registrationParams& params,
     patchMatcher matcher;
     // STACKING: local initialization
     Mat localsum;
-    if (params.stage_stack)
+    Mat localNormalization;
+    if (params.stage_stack) {
       localsum = Mat::zeros(finalsum.size(), CV_32FC3);
+      localNormalization = Mat::zeros(normalization.size(), CV_32F);
+    }
 
     // PARALLELIZED LOOP
     #pragma omp for schedule(dynamic)
@@ -391,13 +396,11 @@ Mat lucky(const registrationParams& params,
 
       // STACKING: main operation
       if (params.stage_stack) {
-        if (params.stage_lucky || context.shiftsValid())
-          localsum += rbf.warp(imgcolor, image.globalShift, allShifts.at(ifile));
-        else
-          // FIXME: this does not work with supersampling yet. For that to work,
-          // an interpolator is needed that will handle both global registration
-          // shifts and lucky imaging.
-          localsum += imgcolor;
+          Mat warpedImg, warpedNormalization;
+          std::tie(warpedImg, warpedNormalization) =
+            rbf.warp(imgcolor, allOnes, image.globalShift, allShifts.at(ifile));
+          localsum += warpedImg;
+          localNormalization += warpedNormalization;
       }
 
       // progress indication
@@ -410,15 +413,21 @@ Mat lucky(const registrationParams& params,
     // STACKING: final sum
     if (params.stage_stack) {
       #pragma omp critical
-      finalsum += localsum;
+      {
+        finalsum += localsum;
+        normalization += localNormalization;
+      }
     }
-  }
+  } // end of parallel section
   if (showProgress)
     std::fprintf(stderr, "\n");
 
   // LUCKY IMAGING: pass the results to registrationContext
   if (params.stage_lucky)
     context.shifts(allShifts);
+
+  if (params.stage_stack)
+    divideChannelsByMask(finalsum, normalization);
 
   // This is only going to return something meaningful if we performed
   // stacking; otherwise, an empty image will be returned.

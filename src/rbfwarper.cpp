@@ -131,9 +131,11 @@ void rbfWarper::prepareBases() {
 }
 
 
-Mat rbfWarper::warp(const Mat& image,
-                    const Point& globalShift,
-                    const Mat1f& shifts) const {
+std::pair<Mat, Mat>
+rbfWarper::warp(const Mat& image,
+                const Mat& normalizationMask,
+                const Point& globalShift,
+                const Mat1f& shifts) const {
   Mat1f weights(coeffs * shifts);
   Mat1f xshift(xshiftbase.clone() + globalShift.x);
   Mat1f yshift(yshiftbase.clone() + globalShift.y);
@@ -151,7 +153,10 @@ Mat rbfWarper::warp(const Mat& image,
     yshift += bases.at(i) * weights.at<float>(i, 1);
   }
 
-  Mat imremap;
-  remap(image, imremap, xshift, yshift, CV_INTER_LINEAR, BORDER_REFLECT);
-  return imremap;
+  Mat imremap, normremap;
+  remap(image, imremap, xshift, yshift,
+        CV_INTER_LINEAR, BORDER_CONSTANT, 0);
+  remap(normalizationMask, normremap, xshift, yshift,
+        CV_INTER_LINEAR, BORDER_CONSTANT, 0);
+  return std::pair<Mat, Mat>(imremap, normremap);
 }

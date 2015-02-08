@@ -42,6 +42,8 @@ void sRGB2linearRGB(cv::Mat& img);
 
 void linearRGB2sRGB(cv::Mat& img);
 
+void divideChannelsByMask(cv::Mat& image, cv::Mat& mask);
+
 cv::Mat meanimg(const registrationContext& context,
                 const bool showProgress = false);
 

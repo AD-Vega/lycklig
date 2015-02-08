@@ -19,6 +19,7 @@
 #ifndef RBFWARPER_H
 #define RBFWARPER_H
 
+#include <utility>
 #include "imagepatch.h"
 
 class rbfWarper {
@@ -28,9 +29,11 @@ public:
             const float sigma,
             const int supersampling = 1);
 
-  cv::Mat warp(const cv::Mat& image,
-               const cv::Point& globalShift,
-               const cv::Mat1f& shifts) const;
+  std::pair<cv::Mat, cv::Mat>
+    warp(const cv::Mat& image,
+         const cv::Mat& normalizationMask,
+         const cv::Point& globalShift,
+         const cv::Mat1f& shifts) const;
 
 private:
   void gauss1d(float* ptr, const cv::Range& range, const float sigma);
