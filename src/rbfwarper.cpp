@@ -23,15 +23,17 @@
 using namespace cv;
 
 rbfWarper::rbfWarper(const patchCollection& patches_,
+                     const cv::Size inputImageSize,
                      const Rect& targetRect,
                      const float sigma_,
                      const int supersampling_):
   patches(patches_), targetOrigin(targetRect.tl()),
   imagesize(targetRect.size()*supersampling_),
   sigma(sigma_*supersampling_), supersampling(supersampling_),
+  normalizationMask(Mat::ones(inputImageSize, CV_32F)),
   bases(patches.size()), coeffs(patches.size(), patches.size()),
-  xshiftbase(imagesize), yshiftbase(imagesize) {
-
+  xshiftbase(imagesize), yshiftbase(imagesize)
+{
   for (int y = 0; y < imagesize.height; y++) {
     for (int x = 0; x < imagesize.width; x++) {
       xshiftbase.at<float>(y, x) =
@@ -133,7 +135,6 @@ void rbfWarper::prepareBases() {
 
 std::pair<Mat, Mat>
 rbfWarper::warp(const Mat& image,
-                const Mat& normalizationMask,
                 const Point& globalShift,
                 const Mat1f& shifts) const {
   Mat1f weights(coeffs * shifts);

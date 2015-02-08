@@ -309,7 +309,7 @@ Mat lucky(const registrationParams& params,
   // if we are only going to do stacking.
   const Mat& refimg = context.refimg();
   const imageSumLookup refsqLookup(refimg.mul(refimg));
-  rbfWarper rbf(context.patches(), outputRectangle,
+  rbfWarper rbf(context.patches(), context.imagesize(), outputRectangle,
                 context.boxsize()/4, params.supersampling);
 
   std::vector<Mat1f> allShifts;
@@ -323,13 +323,12 @@ Mat lucky(const registrationParams& params,
   }
 
   // STACKING: initialization
-  Mat finalsum, normalization, allOnes;
+  Mat finalsum, normalization;
   if (params.stage_stack) {
     Mat sample = magickImread(context.images().at(0).filename);
     finalsum = Mat::zeros(outputRectangle.size() * params.supersampling,
                           CV_MAKETYPE(CV_32F, sample.channels()));
     normalization = Mat::zeros(finalsum.size(), CV_32F);
-    allOnes = Mat::ones(context.imagesize(), CV_32F);
   }
 
   int progress = 0;
@@ -403,7 +402,7 @@ Mat lucky(const registrationParams& params,
       if (params.stage_stack) {
           Mat warpedImg, warpedNormalization;
           std::tie(warpedImg, warpedNormalization) =
-            rbf.warp(inputImage, allOnes, image.globalShift, allShifts.at(ifile));
+            rbf.warp(inputImage, image.globalShift, allShifts.at(ifile));
           localsum += warpedImg;
           localNormalization += warpedNormalization;
       }
