@@ -133,10 +133,6 @@ quadraticFit::quadraticFit(const Mat& data, const Point& point) {
     coeffs.at<float>(2), coeffs.at<float>(4), coeffs.at<float>(5));
   H = (H + H.t())/2;
   solve(H(Range(1,3), Range(1,3)), -H(Range(1,3), Range(0,1)), x0y0);
-  Mat S = Mat::eye(3, 3, CV_32F);
-  S.at<float>(1, 0) = x0y0.at<float>(0);
-  S.at<float>(2, 0) = x0y0.at<float>(1);
-  H = S.t() * H * S;
   eigen(H(Range(1,3), Range(1,3)), eigenvalues, eigenvectors);
 }
 
