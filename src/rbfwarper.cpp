@@ -31,7 +31,7 @@ rbfWarper::rbfWarper(const patchCollection& patches_,
   imagesize(targetRect.size()*supersampling_),
   sigma(sigma_*supersampling_), supersampling(supersampling_),
   normalizationMask(Mat::ones(inputImageSize, CV_32F)),
-  bases(patches.size()), coeffs(patches.size(), patches.size()),
+  coeffs(patches.size(), patches.size()),
   xshiftbase(imagesize), yshiftbase(imagesize)
 {
   for (int y = 0; y < imagesize.height; y++) {
@@ -48,7 +48,7 @@ rbfWarper::rbfWarper(const patchCollection& patches_,
 }
 
 
-void rbfWarper::gauss1d(float* ptr, const Range& range, const float sigma) {
+void rbfWarper::gauss1d(float* ptr, const Range& range, const float sigma) const {
   const float sigmasq = sigma*sigma;
   for (int x = range.start; x < range.end; x++)
     *(ptr++) = exp(-0.5*(x*x)/sigmasq);
@@ -83,27 +83,25 @@ void rbfWarper::prepareBases() {
   int maxx = ceil(br.x);
   int maxy = ceil(br.y);
 
-  // 2D Gaussian is separable in x and y. We create it by preparing one row
-  // and one column, and then multiplying these two together.
-  Mat1f row(1, imagesize.width + maxx - minx);
-  Range rowRange(-maxx, imagesize.width - minx);
-  gauss1d(row.ptr<float>(0), rowRange, sigma);
+  // Determine the size of the rectangle that contains all the basis function
+  // centers and the destination image.
+  Rect allCenters(minx, miny, maxx + 1, maxy + 1);
+  Rect targetRect(targetOrigin, imagesize);
+  basesRect = allCenters | targetRect;
 
-  Mat1f col(imagesize.height + maxy - miny, 1);
-  Range colRange(-maxy, imagesize.height - miny);
-  gauss1d(col.ptr<float>(0), colRange, sigma);
-
-  Mat1f bigGauss(col*row);
-  Point gaussCenter(maxx, maxy);
+  // Create the 1D Gaussian kernel.
+  // 5 sigma ought to be enough for everybody :-)
+  const int halfKernelSize = 5 * sigma;
+  Range gaussRange(-halfKernelSize, halfKernelSize);
+  gaussianKernel = Mat(2 * halfKernelSize+1, 1, CV_32F);
+  gauss1d(gaussianKernel.ptr<float>(0), gaussRange, sigma);
 
   const float sigmasq = pow(sigma, 2);
 
-  // Now create the basis functions by taking cut-outs of bigGauss.
-  // In this loop, we also prepare the matrix that will be then
-  // inverted to solve the equations for the basis coefficients.
+  // In this loop, we prepare the matrix that will be inverted to solve the
+  // equations for the basis coefficients.
   for (int i = 0; i < (signed)patches.size(); i++) {
     Point baseCenter = (patches.at(i).center() - targetF) * supersampling;
-    bases.at(i) = bigGauss(Rect(gaussCenter - baseCenter, imagesize));
 
     // Due to the way which the basis functions are constructed, the origin
     // of the Gaussian functions always lies exactly in the center of a pixel.
@@ -138,26 +136,32 @@ rbfWarper::warp(const Mat& image,
                 const Point& globalShift,
                 const Mat1f& shifts) const {
   Mat1f weights(coeffs * shifts);
-  Mat1f xshift(xshiftbase.clone() + globalShift.x);
-  Mat1f yshift(yshiftbase.clone() + globalShift.y);
+  Mat xshiftPoints = Mat::zeros(basesRect.size(), CV_32F);
+  Mat yshiftPoints = Mat::zeros(basesRect.size(), CV_32F);
 
-  // Add up the weighted basis functions. This amounts to a huge number of
-  // additions and is painfully slow. Currently, this is the undisputed
-  // bottleneck of the warp() method (and, quite possibly, of the whole
-  // program).
-  //
-  // TODO: It might be worth trying out a different approach: placing the
-  // weights directly into their respective positions in the matrix and then
-  // 2D-convolving the matrix with a 2D Gaussian.
-  for (int i = 0; i < (signed)bases.size(); i++) {
-    xshift += bases.at(i) * weights.at<float>(i, 0);
-    yshift += bases.at(i) * weights.at<float>(i, 1);
+  for (int i = 0; i < (signed)patches.size(); i++) {
+    Point baseCenter = patches.at(i).center() * supersampling;
+    baseCenter -= basesRect.tl();
+    xshiftPoints.at<float>(baseCenter) = weights.at<float>(i, 0);
+    yshiftPoints.at<float>(baseCenter) = weights.at<float>(i, 1);
   }
 
+  Mat xshift(basesRect.size(), CV_32F);
+  Mat yshift(basesRect.size(), CV_32F);
+  sepFilter2D(xshiftPoints, xshift, -1, gaussianKernel, gaussianKernel,
+              Point(-1,-1), 0, BORDER_CONSTANT);
+  sepFilter2D(yshiftPoints, yshift, -1, gaussianKernel, gaussianKernel,
+              Point(-1,-1), 0, BORDER_CONSTANT);
+
+  Mat xField = xshift(Rect(targetOrigin, imagesize));
+  Mat yField = yshift(Rect(targetOrigin, imagesize));
+  xField += xshiftbase + globalShift.x;
+  yField += yshiftbase + globalShift.y;
+
   Mat imremap, normremap;
-  remap(image, imremap, xshift, yshift,
+  remap(image, imremap, xField, yField,
         CV_INTER_LINEAR, BORDER_CONSTANT, 0);
-  remap(normalizationMask, normremap, xshift, yshift,
+  remap(normalizationMask, normremap, xField, yField,
         CV_INTER_LINEAR, BORDER_CONSTANT, 0);
   return std::pair<Mat, Mat>(imremap, normremap);
 }

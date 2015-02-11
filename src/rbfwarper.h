@@ -36,7 +36,7 @@ public:
          const cv::Mat1f& shifts) const;
 
 private:
-  void gauss1d(float* ptr, const cv::Range& range, const float sigma);
+  void gauss1d(float* ptr, const cv::Range& range, const float sigma) const;
   void prepareBases();
 
 private:
@@ -46,10 +46,11 @@ private:
   const float sigma;
   const int supersampling;
   const cv::Mat1f normalizationMask;
-  std::vector<cv::Mat1f> bases;
   cv::Mat1f coeffs;
   cv::Mat1f xshiftbase;
   cv::Mat1f yshiftbase;
+  cv::Rect basesRect;
+  cv::Mat gaussianKernel;
 };
 
 #endif // RBFWARPER_H
