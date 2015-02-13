@@ -16,6 +16,7 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <iostream>
 #include <algorithm>
 #include "imageops.h"
 #include "lucky.h"
@@ -323,8 +324,13 @@ Mat lucky(const registrationParams& params,
     finalsum = Mat::zeros(outputRectangle.size() * params.supersampling,
                           CV_MAKETYPE(CV_32F, sample.channels()));
     normalization = Mat::zeros(finalsum.size(), CV_32F);
+
+    // This could take quite some time if there is a lot of registration
+    // points. Inform the user about what is going on.
+    std::cerr << "Initializing the RBF warper (could take some time)... ";
     rbf = new rbfWarper(context.patches(), context.imagesize(), outputRectangle,
                  context.boxsize()/4, params.supersampling);
+    std::cerr << "done\n";
   }
 
   int progress = 0;
