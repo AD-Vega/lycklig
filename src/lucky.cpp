@@ -297,21 +297,18 @@ Mat lucky(const registrationParams& params,
           registrationContext& context,
           const bool showProgress)
 {
-  Rect outputRectangle = context.refimgRectangle();
+  Rect outputRectangle = Rect(Point(0, 0), context.imagesize());
   if (params.crop && context.commonRectangleValid())
     outputRectangle = context.commonRectangle();
 
-  // These initializations are relatively cheap and can be performed even
-  // if we are only going to do stacking.
   const Mat& refimg = context.refimg();
-  const imageSumLookup refsqLookup(refimg.mul(refimg));
-  rbfWarper rbf(context.patches(), context.imagesize(), outputRectangle,
-                context.boxsize()/4, params.supersampling);
 
+  imageSumLookup refsqLookup;
   std::vector<Mat1f> allShifts;
   if (params.stage_lucky) {
     // Shifts will be computed during this run.
     allShifts.resize(context.images().size());
+    refsqLookup = imageSumLookup(refimg.mul(refimg));
   }
   else if (params.stage_stack && context.shiftsValid()) {
     // Use shifts from a state file, if they are available.
@@ -320,11 +317,14 @@ Mat lucky(const registrationParams& params,
 
   // STACKING: initialization
   Mat finalsum, normalization;
+  rbfWarper* rbf = nullptr;
   if (params.stage_stack) {
     Mat sample = magickImread(context.images().at(0).filename);
     finalsum = Mat::zeros(outputRectangle.size() * params.supersampling,
                           CV_MAKETYPE(CV_32F, sample.channels()));
     normalization = Mat::zeros(finalsum.size(), CV_32F);
+    rbf = new rbfWarper(context.patches(), context.imagesize(), outputRectangle,
+                 context.boxsize()/4, params.supersampling);
   }
 
   int progress = 0;
@@ -396,11 +396,12 @@ Mat lucky(const registrationParams& params,
 
       // STACKING: main operation
       if (params.stage_stack) {
-          Mat warpedImg, warpedNormalization;
-          std::tie(warpedImg, warpedNormalization) =
-            rbf.warp(inputImage, image.globalShift, allShifts.at(ifile));
-          localsum += warpedImg;
-          localNormalization += warpedNormalization;
+        const Mat1f shifts(context.shiftsValid() ? allShifts.at(ifile) : Mat());
+        Mat warpedImg, warpedNormalization;
+        std::tie(warpedImg, warpedNormalization) =
+          rbf->warp(inputImage, image.globalShift, shifts);
+        localsum += warpedImg;
+        localNormalization += warpedNormalization;
       }
 
       // progress indication
@@ -426,8 +427,10 @@ Mat lucky(const registrationParams& params,
   if (params.stage_lucky)
     context.shifts(allShifts);
 
-  if (params.stage_stack)
+  if (params.stage_stack) {
     divideChannelsByMask(finalsum, normalization);
+    delete rbf;
+  }
 
   // This is only going to return something meaningful if we performed
   // stacking; otherwise, an empty image will be returned.

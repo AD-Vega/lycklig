@@ -174,10 +174,13 @@ Mat normalizeTo16Bits(const Mat& inputImg) {
 
 
 imageSumLookup::imageSumLookup(const Mat& img) :
-  table(img.size() + cv::Size(1,1), img.type())
+  table(img.size() + cv::Size(1, 1), img.type())
 {
   table.row(0) = Scalar(0);
   table.col(0) = Scalar(0);
+  if (img.size() == Size(0, 0))
+    return;
+
   img.copyTo(table(cv::Rect(Point(1, 1), img.size())));
 
   for(int row = 2; row < table.rows; row++)

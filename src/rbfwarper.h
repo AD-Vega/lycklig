@@ -33,7 +33,7 @@ public:
   std::pair<cv::Mat, cv::Mat>
     warp(const cv::Mat& image,
          const cv::Point& globalShift,
-         const cv::Mat1f& shifts) const;
+         const cv::Mat1f& shifts = cv::Mat()) const;
 
 private:
   void gauss1d(float* ptr, const cv::Range& range, const float sigma) const;

@@ -52,6 +52,7 @@ cv::Mat normalizeTo16Bits(const cv::Mat& inputImg);
 class imageSumLookup
 {
 public:
+  imageSumLookup() = default;
   imageSumLookup(const cv::Mat& img);
   float lookup(const cv::Rect rect) const;
 

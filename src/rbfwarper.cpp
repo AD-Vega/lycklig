@@ -22,6 +22,7 @@
 
 using namespace cv;
 
+
 rbfWarper::rbfWarper(const patchCollection& patches_,
                      const cv::Size inputImageSize,
                      const Rect& targetRect,
@@ -135,28 +136,34 @@ std::pair<Mat, Mat>
 rbfWarper::warp(const Mat& image,
                 const Point& globalShift,
                 const Mat1f& shifts) const {
-  Mat1f weights(coeffs * shifts);
-  Mat xshiftPoints = Mat::zeros(basesRect.size(), CV_32F);
-  Mat yshiftPoints = Mat::zeros(basesRect.size(), CV_32F);
+  Mat xField, yField;
 
-  for (int i = 0; i < (signed)patches.size(); i++) {
-    Point baseCenter = patches.at(i).center() * supersampling;
-    baseCenter -= basesRect.tl();
-    xshiftPoints.at<float>(baseCenter) = weights.at<float>(i, 0);
-    yshiftPoints.at<float>(baseCenter) = weights.at<float>(i, 1);
+  if (!shifts.empty()) {
+    Mat1f weights(coeffs * shifts);
+    Mat xshiftPoints = Mat::zeros(basesRect.size(), CV_32F);
+    Mat yshiftPoints = Mat::zeros(basesRect.size(), CV_32F);
+
+    for (int i = 0; i < (signed)patches.size(); i++) {
+      Point baseCenter = patches.at(i).center() * supersampling;
+      baseCenter -= basesRect.tl();
+      xshiftPoints.at<float>(baseCenter) = weights.at<float>(i, 0);
+      yshiftPoints.at<float>(baseCenter) = weights.at<float>(i, 1);
+    }
+
+    Mat xshift(basesRect.size(), CV_32F);
+    Mat yshift(basesRect.size(), CV_32F);
+    sepFilter2D(xshiftPoints, xshift, -1, gaussianKernel, gaussianKernel,
+                Point(-1,-1), 0, BORDER_CONSTANT);
+    sepFilter2D(yshiftPoints, yshift, -1, gaussianKernel, gaussianKernel,
+                Point(-1,-1), 0, BORDER_CONSTANT);
+
+    xField = xshift(Rect(targetOrigin, imagesize)) + xshiftbase + globalShift.x;
+    yField = yshift(Rect(targetOrigin, imagesize)) + yshiftbase + globalShift.y;
   }
-
-  Mat xshift(basesRect.size(), CV_32F);
-  Mat yshift(basesRect.size(), CV_32F);
-  sepFilter2D(xshiftPoints, xshift, -1, gaussianKernel, gaussianKernel,
-              Point(-1,-1), 0, BORDER_CONSTANT);
-  sepFilter2D(yshiftPoints, yshift, -1, gaussianKernel, gaussianKernel,
-              Point(-1,-1), 0, BORDER_CONSTANT);
-
-  Mat xField = xshift(Rect(targetOrigin, imagesize));
-  Mat yField = yshift(Rect(targetOrigin, imagesize));
-  xField += xshiftbase + globalShift.x;
-  yField += yshiftbase + globalShift.y;
+  else {
+    xField = xshiftbase + globalShift.x;
+    yField = yshiftbase + globalShift.y;
+  }
 
   Mat imremap, normremap;
   remap(image, imremap, xField, yField,
