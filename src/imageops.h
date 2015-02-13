@@ -42,8 +42,9 @@ void sRGB2linearRGB(cv::Mat& img);
 
 void linearRGB2sRGB(cv::Mat& img);
 
-cv::Mat meanimg(const registrationParams& params,
-                const registrationContext& context,
+void divideChannelsByMask(cv::Mat& image, cv::Mat& mask);
+
+cv::Mat meanimg(const registrationContext& context,
                 const bool showProgress = false);
 
 cv::Mat normalizeTo16Bits(const cv::Mat& inputImg);
@@ -51,6 +52,7 @@ cv::Mat normalizeTo16Bits(const cv::Mat& inputImg);
 class imageSumLookup
 {
 public:
+  imageSumLookup() = default;
   imageSumLookup(const cv::Mat& img);
   float lookup(const cv::Rect rect) const;
 

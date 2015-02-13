@@ -32,6 +32,7 @@ public:
 
   std::string filename;
   cv::Point globalShift;
+  float globalMultiplier;
 };
 
 void write(cv::FileStorage& fs, const std::string&, const inputImage& image);

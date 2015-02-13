@@ -36,7 +36,7 @@ private:
   // Not thread safe.
   // Each thread needs to have its own instance of globalRegistrator in order
   // to call this method. See getGlobalShifts().
-  cv::Point findShift(const cv::Mat& img);
+  void findShift(inputImage& image, const cv::Mat& pixels);
 
   cv::Mat1f refImgWithBorder;
   cv::Mat1f refImageArea;

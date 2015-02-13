@@ -27,12 +27,17 @@
 class patchMatcher {
 public:
   cv::Mat1f match(const cv::Mat1f& img,
+                  const cv::Rect imgRect,
+                  const cv::Rect validRect,
                   const imagePatch& patch,
                   const float multiplier);
 
 private:
-  cv::Mat1f areasq;
+  cv::Mat1f roisq;
   cv::Mat1f cor;
+  cv::Mat1f patchsq;
+  cv::Mat1f normalization;
+  cv::Mat1f imgValidMask;
 };
 
 

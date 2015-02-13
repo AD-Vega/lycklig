@@ -16,6 +16,8 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <iostream>
+#include <algorithm>
 #include "imageops.h"
 #include "lucky.h"
 
@@ -28,6 +30,8 @@ patchCollection selectPointsHex(const registrationParams& params,
   const auto& refimg = context.refimg();
   patchCollection patches;
   patches.patchCreationArea = patchCreationArea;
+  int originx = patchCreationArea.x;
+  int originy = patchCreationArea.y;
   const int boxsize = context.boxsize();
 
   // We set maximum displacement to maxmove+1: the 1px border is used as a
@@ -44,15 +48,16 @@ patchCollection selectPointsHex(const registrationParams& params,
   int yspacing = ceil(xydiff*sqrt(0.75));
   const int xshift = xydiff/2;
   int period = 0;
-  for (int y = maxmb;
-       y <= patchCreationArea.height - boxsize - maxmb;
+  for (int y = 0;
+       y <= patchCreationArea.height - boxsize;
        y += yspacing, period++)
     {
-    for (int x = maxmb + (period % 2 ? xshift : 0);
-         x <= patchCreationArea.width - boxsize - maxmb;
+    for (int x = (period % 2 ? xshift : 0);
+         x <= patchCreationArea.width - boxsize;
          x += xydiff) {
-      Rect searchArea(Point(x-maxmb, y-maxmb), Point(x+boxsize+maxmb, y+boxsize+maxmb));
-      imagePatch p(refimg, x, y, boxsize, searchArea);
+      Rect relativeSearchArea(Point(x-maxmb, y-maxmb), Point(x+boxsize+maxmb, y+boxsize+maxmb));
+      imagePatch p(refimg, originx + x, originy + y, boxsize,
+                   relativeSearchArea + patchCreationArea.tl());
       patches.push_back(p);
     }
   }
@@ -61,14 +66,35 @@ patchCollection selectPointsHex(const registrationParams& params,
 
 
 Mat1f patchMatcher::match(const Mat1f& img,
+                          const Rect imgRect,
+                          const Rect validRect,
                           const imagePatch& patch,
                           const float multiplier)
 {
-  Mat1f roi(img, patch.searchArea);
-  patch.cookedMask.match(roi.mul(roi), areasq);
+  Mat1f roi(img, patch.searchArea - imgRect.tl());
+  patch.cookedMask.match(roi.mul(roi), roisq);
   patch.cookedTmpl.match(roi, cor);
-  Mat1f match = areasq - 2*multiplier*cor + pow(multiplier, 2)*patch.sqsum;
-  return match;
+
+  if (patch.searchAreaWithin(validRect))
+  {
+    // Search area is completely within the image. This is easy.
+    return roisq - 2*multiplier*cor + pow(multiplier, 2)*patch.sqsum;
+  }
+  else {
+    // Search area is only partially within the image. We need some more
+    // computations to handle this.
+    if (imgValidMask.size() != patch.searchArea.size())
+      imgValidMask = Mat::zeros(patch.searchArea.size(), CV_32F);
+    else
+      imgValidMask.setTo(0);
+
+    imgValidMask((patch.searchArea & validRect) - patch.searchArea.tl()) = 1;
+    patch.cookedSquare.match(imgValidMask, patchsq);
+    patch.cookedMask.match(imgValidMask, normalization);
+
+    Mat1f unn_match = roisq - 2*multiplier*cor + pow(multiplier, 2)*patchsq;
+    return unn_match.mul(1/normalization);
+  }
 }
 
 
@@ -108,10 +134,6 @@ quadraticFit::quadraticFit(const Mat& data, const Point& point) {
     coeffs.at<float>(2), coeffs.at<float>(4), coeffs.at<float>(5));
   H = (H + H.t())/2;
   solve(H(Range(1,3), Range(1,3)), -H(Range(1,3), Range(0,1)), x0y0);
-  Mat S = Mat::eye(3, 3, CV_32F);
-  S.at<float>(1, 0) = x0y0.at<float>(0);
-  S.at<float>(2, 0) = x0y0.at<float>(1);
-  H = S.t() * H * S;
   eigen(H(Range(1,3), Range(1,3)), eigenvalues, eigenvectors);
 }
 
@@ -157,10 +179,21 @@ patchCollection filterPatchesByQuality(const patchCollection& patches,
   patchCollection newPatches;
   newPatches.patchCreationArea = patches.patchCreationArea;
 
+  Rect refimgRect(Point(0, 0), refimg.size());
+  Rect totalArea = patches.searchAreaForImage(refimgRect);
+  int top = -std::min(totalArea.y, 0);
+  int left = -std::min(totalArea.x, 0);
+  int bottom = std::max(totalArea.br().y - refimg.rows, 0);
+  int right = std::max(totalArea.br().x - refimg.cols, 0);
+  Mat paddedRefimg;
+  copyMakeBorder(refimg, paddedRefimg, top, bottom, left, right, BORDER_CONSTANT, 0);
+  Rect paddedRect = Rect(Point(-left, -top), paddedRefimg.size());
+  refimgRect += Point(left, top);
+
   patchMatcher matcher;
   for (auto& patch : patches) {
     // perform the matching
-    Mat1f match = matcher.match(refimg, patch, 1.0);
+    Mat1f match = matcher.match(paddedRefimg, paddedRect, refimgRect, patch, 1.0);
 
     // Find the local neighbourhood of the central point and fit a 2D
     // quadratic polynomial to it.
@@ -196,43 +229,58 @@ Mat drawPoints(const Mat& img, const patchCollection& patches) {
 
 
 Mat1f findShifts(const Mat& img,
+                 const Rect imgRect,
+                 const Rect validRect,
                  const patchCollection& patches,
                  const float multiplier,
                  patchMatcher& matcher) {
   Mat1f shifts(patches.size(), 2);
-  int patchNr = 0;
+  int patchNr = -1;
+
   for (auto& patch : patches) {
-    Mat1f match = matcher.match(img, patch, multiplier);
+    patchNr++;
+    if (!patch.searchAreaOverlaps(validRect)) {
+      shifts.at<float>(patchNr, 0) = 0;
+      shifts.at<float>(patchNr, 1) = 0;
+      continue;
+    }
+
+    Mat1f match = matcher.match(img, imgRect, validRect, patch, multiplier);
     Point coarseMin;
-    minMaxLoc(match, NULL, NULL, &coarseMin);
     Point2f subPixelMin(0,0);
+    minMaxLoc(match, NULL, NULL, &coarseMin);
+
     // Check whether the match was located in the outer 1px buffer zone
     // (i.e., whether it has exceeded the given maxmove). This usually
     // indicates an extremely questionable match and we rather leave
-    // the shift at (0,0) for this point.
-    if (coarseMin.x != 0 && coarseMin.y != 0 &&
-      coarseMin.x != match.cols - 1 && coarseMin.y != match.rows - 1) {
+    // the shift at (0,0) for this point. We also reject really pathological
+    // cases (like a whole matrix of NaNs) which are indicated by minMaxLoc
+    // reporting the minimum at (-1,-1).
+    if (coarseMin.x > 0 && coarseMin.y > 0 &&
+      coarseMin.x < match.cols - 1 && coarseMin.y < match.rows - 1) {
       // The coarse estimate seems OK; do subpixel correction now.
       subPixelMin = coarseMin;
       quadraticFit qf(match, coarseMin);
       Point2f subShift = qf.minimum();
+
       if (abs(subShift.x) > 0.5 || abs(subShift.y) > 0.5) {
         // Subpixel correction larger than 0.5 px indicates poor fit. Project
         // out the direction corresponding to the smaller eigenvalue and see
         // if that helps.
         subShift = subShift.dot(qf.largerEigVec()) * qf.largerEigVec();
+
         // Give up if the shift is still larger than 0.5 px.
         if (abs(subShift.x) > 0.5 || abs(subShift.y) > 0.5)
           subShift = Point2f(0, 0);
       }
       subPixelMin += subShift;
+
       // The shift is reported relative to the top left corner in the
       // image. Change it so that it refers to the center.
       subPixelMin -= Point2f(patch.matchShiftx(), patch.matchShifty());
     }
     shifts.at<float>(patchNr, 0) = subPixelMin.x;
     shifts.at<float>(patchNr, 1) = subPixelMin.y;
-    patchNr++;
   }
   return shifts;
 }
@@ -250,24 +298,18 @@ Mat lucky(const registrationParams& params,
           registrationContext& context,
           const bool showProgress)
 {
-  Rect outputRectangle = context.refimgRectangle();
+  Rect outputRectangle = Rect(Point(0, 0), context.imagesize());
   if (params.crop && context.commonRectangleValid())
     outputRectangle = context.commonRectangle();
 
-  // These initializations are relatively cheap and can be performed even
-  // if we are only going to do stacking.
   const Mat& refimg = context.refimg();
-  const imageSumLookup refsqLookup(refimg.mul(refimg));
 
-  // rbfWarper can be harmlessly constructed with an empty patch list, but
-  // should then not be used.
-  rbfWarper rbf(context.patches(), outputRectangle,
-                context.boxsize()/4, params.supersampling);
-
+  imageSumLookup refsqLookup;
   std::vector<Mat1f> allShifts;
   if (params.stage_lucky) {
     // Shifts will be computed during this run.
     allShifts.resize(context.images().size());
+    refsqLookup = imageSumLookup(refimg.mul(refimg));
   }
   else if (params.stage_stack && context.shiftsValid()) {
     // Use shifts from a state file, if they are available.
@@ -275,7 +317,21 @@ Mat lucky(const registrationParams& params,
   }
 
   // STACKING: initialization
-  Mat finalsum = Mat::zeros(outputRectangle.size() * params.supersampling, CV_32FC3);
+  Mat finalsum, normalization;
+  rbfWarper* rbf = nullptr;
+  if (params.stage_stack) {
+    Mat sample = magickImread(context.images().at(0).filename);
+    finalsum = Mat::zeros(outputRectangle.size() * params.supersampling,
+                          CV_MAKETYPE(CV_32F, sample.channels()));
+    normalization = Mat::zeros(finalsum.size(), CV_32F);
+
+    // This could take quite some time if there is a lot of registration
+    // points. Inform the user about what is going on.
+    std::cerr << "Initializing the RBF warper (could take some time)... ";
+    rbf = new rbfWarper(context.patches(), context.imagesize(), outputRectangle,
+                 context.boxsize()/4, params.supersampling);
+    std::cerr << "done\n";
+  }
 
   int progress = 0;
   if (showProgress)
@@ -286,54 +342,72 @@ Mat lucky(const registrationParams& params,
     patchMatcher matcher;
     // STACKING: local initialization
     Mat localsum;
-    if (params.stage_stack)
-      localsum = Mat::zeros(finalsum.size(), CV_32FC3);
+    Mat localNormalization;
+    if (params.stage_stack) {
+      localsum = Mat::zeros(finalsum.size(), finalsum.type());
+      localNormalization = Mat::zeros(normalization.size(), CV_32F);
+    }
 
     // PARALLELIZED LOOP
     #pragma omp for schedule(dynamic)
     for (int ifile = 0; ifile < (signed)context.images().size(); ifile++) {
       // common step: load an image
       const auto& image = context.images().at(ifile);
-      Mat imgcolor = magickImread(image.filename);
+      Mat inputImage = magickImread(image.filename);
 
       // LUCKY IMAGING: main operation
       if (params.stage_lucky) {
         Mat1f img;
-        cvtColor(imgcolor, img, CV_BGR2GRAY);
+        if (inputImage.channels() > 1)
+          cvtColor(inputImage, img, CV_BGR2GRAY);
+        else
+          img = inputImage;
 
         // Image rectangle, expressed in coordinate systems of image itself
         // and the reference image.
         Rect img_coordImg(Point(0, 0), img.size());
         Rect img_coordRefimg = img_coordImg - image.globalShift;
+
         // Overlap between img and refimg, again according to both coordinate
         // systems.
         Rect overlap_coordRefimg = context.refimgRectangle() & img_coordRefimg;
         Rect overlap_coordImg = overlap_coordRefimg + image.globalShift;
 
-        // Calculate optimal multiplier for img vs. refimg.
+        // Isolate the common portions of img and refimg.
         Mat imgOverlap(img, overlap_coordImg);
-        const float multiplier = sum(imgOverlap.mul(imgOverlap))[0] /
+        Mat refimgOverlap(refimg, overlap_coordRefimg);
+
+        // Calculate optimal multiplier for img vs. refimg.
+        const float multiplier = sum(imgOverlap.mul(refimgOverlap))[0] /
                                  refsqLookup.lookup(overlap_coordRefimg);
 
-        // Pad the image.
-        Mat tmp = Mat::zeros(refimg.size(), refimg.type());
-        imgOverlap.copyTo(tmp(overlap_coordRefimg));
-        img = tmp;
+        // Extract the part of image needed for matching and possibly pad it.
+        Rect totalArea = context.patches().searchAreaForImage(img_coordRefimg);
+        Rect searchOverlap = totalArea & img_coordRefimg;
+        Mat imgSearchRoi(img, searchOverlap + image.globalShift);
+        if (searchOverlap == totalArea)
+          img = imgSearchRoi;
+        else {
+          Mat paddedImg = Mat::zeros(totalArea.size(), img.type());
+          Rect destinationRoi = searchOverlap - totalArea.tl();
+          imgSearchRoi.copyTo(paddedImg(destinationRoi));
+          img = paddedImg;
+        }
 
         // Find lucky imaging shifts.
-        Mat1f shifts(findShifts(img, context.patches(), multiplier, matcher));
-        allShifts.at(ifile) = shifts;
+        allShifts.at(ifile) =
+          findShifts(img, totalArea, searchOverlap, context.patches(),
+                     multiplier, matcher);
       }
 
       // STACKING: main operation
       if (params.stage_stack) {
-        if (params.stage_lucky || context.shiftsValid())
-          localsum += rbf.warp(imgcolor, image.globalShift, allShifts.at(ifile));
-        else
-          // FIXME: this does not work with supersampling yet. For that to work,
-          // an interpolator is needed that will handle both global registration
-          // shifts and lucky imaging.
-          localsum += imgcolor;
+        const Mat1f shifts(context.shiftsValid() ? allShifts.at(ifile) : Mat());
+        Mat warpedImg, warpedNormalization;
+        std::tie(warpedImg, warpedNormalization) =
+          rbf->warp(inputImage, image.globalShift, shifts);
+        localsum += warpedImg;
+        localNormalization += warpedNormalization;
       }
 
       // progress indication
@@ -346,15 +420,23 @@ Mat lucky(const registrationParams& params,
     // STACKING: final sum
     if (params.stage_stack) {
       #pragma omp critical
-      finalsum += localsum;
+      {
+        finalsum += localsum;
+        normalization += localNormalization;
+      }
     }
-  }
+  } // end of parallel section
   if (showProgress)
     std::fprintf(stderr, "\n");
 
   // LUCKY IMAGING: pass the results to registrationContext
   if (params.stage_lucky)
     context.shifts(allShifts);
+
+  if (params.stage_stack) {
+    divideChannelsByMask(finalsum, normalization);
+    delete rbf;
+  }
 
   // This is only going to return something meaningful if we performed
   // stacking; otherwise, an empty image will be returned.

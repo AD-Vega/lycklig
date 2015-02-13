@@ -76,8 +76,16 @@ int main(const int argc, const char *argv[]) {
 
   // preregistration stage
   if (params.stage_prereg) {
-    if (params.prereg_img.empty())
+    if (params.prereg == registrationParams::preregType::FirstImage)
       params.prereg_img = context.images().at(0).filename;
+    else if (params.prereg == registrationParams::preregType::MiddleImage)
+    {
+      // Select the middle image if the number of images is odd or the image
+      // just before the middle if their number is even.
+      int middle = (context.images().size() + 1)/ 2 - 1;
+      params.prereg_img = context.images().at(middle).filename;
+    }
+
     Mat globalRefimg(grayReader().read(params.prereg_img));
     if (params.prereg_maxmove == 0) {
       params.prereg_maxmove = std::min(globalRefimg.rows, globalRefimg.cols)/2;
@@ -96,7 +104,7 @@ int main(const int argc, const char *argv[]) {
       (need_refimg && !context.refimgValid())) {
     std::cerr << "Creating a stacked reference image\n";
     // This creates a color image. See below for implications.
-    rawRef = meanimg(params, context, true);
+    rawRef = meanimg(context, true);
   }
 
   if (params.only_refimg) {
@@ -123,7 +131,10 @@ int main(const int argc, const char *argv[]) {
   if (params.stage_refimg || (need_refimg && !context.refimgValid())) {
     // Save the black&white reference image to context.
     Mat refimg;
-    cvtColor(rawRef, refimg, CV_BGR2GRAY);
+    if (rawRef.channels() > 1)
+      cvtColor(rawRef, refimg, CV_BGR2GRAY);
+    else
+      refimg = rawRef;
     context.refimg(refimg);
 
     // Changing the reference image invalidates lucky imaging registration
@@ -143,8 +154,17 @@ int main(const int argc, const char *argv[]) {
 
   // Where to create the registration points.
   Rect patchCreationArea = context.refimgRectangle();
-  if (params.crop && context.commonRectangleValid())
-    patchCreationArea = context.commonRectangle();
+  if (params.crop && context.commonRectangleValid()) {
+    // The reference image is usually larger than commonRectangle and we can
+    // expand the patch creation area so that the reference points are placed
+    // right on the edge of commonRectangle.
+    const Rect cr = context.commonRectangle();
+    const Point halfbox(params.boxsize/2, params.boxsize/2);
+    const Rect expandedSearch(cr.tl() - halfbox, cr.br() + halfbox);
+    // But do cautiously trim the expanded rectangle so that it fits within
+    // the reference image.
+    patchCreationArea = expandedSearch & context.refimgRectangle();
+  }
 
   // If we have the registration points already, check that they were created
   // with the same crop option.

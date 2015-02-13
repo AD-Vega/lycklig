@@ -34,6 +34,8 @@ public:
   bool stage_stack = false;
 
   // global registration
+  enum class preregType { None, ExplicitImage, FirstImage, MiddleImage }
+    prereg = preregType::None;
   std::string prereg_img;
   unsigned int prereg_maxmove = 0;
 

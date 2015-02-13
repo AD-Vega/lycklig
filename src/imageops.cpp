@@ -26,9 +26,18 @@ Mat magickImread(const std::string& filename)
 {
   Magick::Image image;
   image.read(filename);
-  cv::Mat output(image.rows(), image.columns(), CV_32FC3);
-  image.write(0, 0, image.columns(), image.rows(),
-                 "BGR", Magick::FloatPixel, output.data);
+  cv::Mat output;
+
+  if (image.colorSpace() == Magick::GRAYColorspace) {
+    output = cv::Mat(image.rows(), image.columns(), CV_32F);
+    image.write(0, 0, image.columns(), image.rows(),
+                "I", Magick::FloatPixel, output.data);
+  }
+  else {
+    output = cv::Mat(image.rows(), image.columns(), CV_32FC3);
+    image.write(0, 0, image.columns(), image.rows(),
+                  "BGR", Magick::FloatPixel, output.data);
+  }
   sRGB2linearRGB(output);
   return output;
 }
@@ -37,6 +46,7 @@ Mat magickImread(const std::string& filename)
 void sRGB2linearRGB(Mat& img) {
   int rows = img.rows;
   int cols = img.cols;
+  int channels = img.channels();
   if (img.isContinuous()) {
     cols *= rows;
     rows = 1;
@@ -44,7 +54,7 @@ void sRGB2linearRGB(Mat& img) {
   for(int row = 0; row < rows; row++)
   {
     float* ptr = img.ptr<float>(row);
-    for (int i = 0; i < 3*cols; i++) {
+    for (int i = 0; i < cols*channels; i++) {
       *ptr = (*ptr <= 0.04045 ? *ptr/12.92 : pow((*ptr + 0.055)/1.055, 2.4));
       ptr++;
     }
@@ -55,6 +65,7 @@ void sRGB2linearRGB(Mat& img) {
 void linearRGB2sRGB(Mat& img) {
   int rows = img.rows;
   int cols = img.cols;
+  int channels = img.channels();
   if (img.isContinuous()) {
     cols *= rows;
     rows = 1;
@@ -62,7 +73,7 @@ void linearRGB2sRGB(Mat& img) {
   for(int row = 0; row < rows; row++)
   {
     float* ptr = img.ptr<float>(row);
-    for (int i = 0; i < 3*cols; i++) {
+    for (int i = 0; i < cols*channels; i++) {
       *ptr = (*ptr <= 0.0031308 ? *ptr*12.92 : 1.055*pow(*ptr, 1/2.4) - 0.055);
       ptr++;
     }
@@ -71,19 +82,48 @@ void linearRGB2sRGB(Mat& img) {
 
 
 Mat grayReader::read(const string& file) {
-  cvtColor(magickImread(file.c_str()), imggray, CV_BGR2GRAY);
-  return imggray;
+  Mat img = magickImread(file.c_str());
+  if (img.channels() > 1) {
+    // colour image: convert to gray
+    cvtColor(img, imggray, CV_BGR2GRAY);
+    return imggray;
+  }
+  else {
+    // already gray
+    return img;
+  }
 }
 
 
-Mat meanimg(const registrationParams& params,
-            const registrationContext& context,
+void divideChannelsByMask(Mat& image, Mat& mask)
+{
+  int rows = image.rows;
+  int cols = image.cols;
+  int channels = image.channels();
+
+  if(image.isContinuous() && mask.isContinuous())
+  {
+      cols *= rows;
+      rows = 1;
+  }
+  for (int row = 0; row < rows; row++)
+  {
+    float* imgptr = image.ptr<float>(row);
+    float* normptr = mask.ptr<float>(row);
+    for (int pos = 0; pos < cols*channels; pos++)
+      imgptr[pos] /= normptr[pos/channels];
+  }
+}
+
+
+Mat meanimg(const registrationContext& context,
             const bool showProgress) {
   const auto& images = context.images();
 
   Mat sample = magickImread(images.at(0).filename);
   Rect imgRect(Point(0, 0), sample.size());
   Mat imgmean = Mat::zeros(sample.size(), CV_MAKETYPE(CV_32F, sample.channels()));
+  Mat normalizationMask = Mat::zeros(sample.size(), CV_32F);
 
   int progress = 0;
   if (showProgress)
@@ -91,20 +131,17 @@ Mat meanimg(const registrationParams& params,
   #pragma omp parallel
   {
     Mat localsum(imgmean.clone());
+    Mat localNormMask(normalizationMask.clone());
     #pragma omp barrier
     #pragma omp for
     for (int i = 0; i < (signed)images.size(); i++) {
       auto image = images.at(i);
       Mat data = magickImread(image.filename);
 
-      if (image.globalShift != Point(0, 0)) {
-        // TODO: normalization mask
-        Rect sourceRoi = (imgRect + image.globalShift) & imgRect;
-        Rect destRoi = sourceRoi - image.globalShift;
-        accumulate(data(sourceRoi), localsum(destRoi));
-      }
-      else
-        accumulate(data, localsum);
+      Rect sourceRoi = (imgRect + image.globalShift) & imgRect;
+      Rect destRoi = sourceRoi - image.globalShift;
+      accumulate(data(sourceRoi), localsum(destRoi));
+      localNormMask(destRoi) += image.globalMultiplier;
 
       if (showProgress) {
         #pragma omp critical
@@ -113,10 +150,12 @@ Mat meanimg(const registrationParams& params,
     }
     #pragma omp critical
     accumulate(localsum, imgmean);
+    accumulate(localNormMask, normalizationMask);
   }
   if (showProgress)
     std::fprintf(stderr, "\n");
-  imgmean /= images.size();
+
+  divideChannelsByMask(imgmean, normalizationMask);
   return imgmean;
 }
 
@@ -129,16 +168,19 @@ Mat normalizeTo16Bits(const Mat& inputImg) {
   linearRGB2sRGB(img);
   img *= ((1<<16)-1);
   Mat imgout;
-  img.convertTo(imgout, CV_16UC3);
+  img.convertTo(imgout, CV_MAKETYPE(CV_16U, img.channels()));
   return imgout;
 }
 
 
 imageSumLookup::imageSumLookup(const Mat& img) :
-  table(img.size() + cv::Size(1,1), img.type())
+  table(img.size() + cv::Size(1, 1), img.type())
 {
   table.row(0) = Scalar(0);
   table.col(0) = Scalar(0);
+  if (img.size() == Size(0, 0))
+    return;
+
   img.copyTo(table(cv::Rect(Point(1, 1), img.size())));
 
   for(int row = 2; row < table.rows; row++)
@@ -170,8 +212,8 @@ imageSumLookup::imageSumLookup(const Mat& img) :
 float imageSumLookup::lookup(const Rect rect) const
 {
   return
-      table.at<float>(rect.x + rect.width, rect.y + rect.height)
-    + table.at<float>(rect.x, rect.y)
-    - table.at<float>(rect.x + rect.width, rect.y)
-    - table.at<float>(rect.x, rect.y + rect.height);
+      table.at<float>(rect.y + rect.height, rect.x + rect.width)
+    + table.at<float>(rect.y, rect.x)
+    - table.at<float>(rect.y + rect.height, rect.x)
+    - table.at<float>(rect.y, rect.x + rect.width);
 }
