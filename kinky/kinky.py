@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 # kinky, a wavy image enhancer
 # Copyright (C) 2014-2015 Jure Varlec <jure.varlec@ad-vega.si>
