@@ -402,7 +402,8 @@ Mat lucky(const registrationParams& params,
 
       // STACKING: main operation
       if (params.stage_stack) {
-        const Mat1f shifts(context.shiftsValid() ? allShifts.at(ifile) : Mat());
+        const Mat1f shifts(params.stage_lucky || context.shiftsValid() ?
+                           allShifts.at(ifile) : Mat());
         Mat warpedImg, warpedNormalization;
         std::tie(warpedImg, warpedNormalization) =
           rbf->warp(inputImage, image.globalShift, shifts);
