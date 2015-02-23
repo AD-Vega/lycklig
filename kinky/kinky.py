@@ -35,13 +35,15 @@ import sys, os, math
 _k_enh_prec = '{:.5g}'
 _σ_enh_prec = '{:.3f}'
 _σ_noise_prec = '{:.3f}'
-_filename_fmtstring = "_k{}_sigma{}_noise{}"
+_th_prec = '{:1.0f}'
+_filename_fmtstring = "_k{}_sigma{}_noise{}_thresh{}"
 _filename_fmtstring = _filename_fmtstring.format(_k_enh_prec, _σ_enh_prec,
-                                                 _σ_noise_prec)
+                                                 _σ_noise_prec, _th_prec)
 
 _k_enh_default = 1.0
 _σ_enh_default = 0.25
 _σ_noise_default = 0.1
+_th_default = 1e-1
 
 _zoom = 1.1
 
@@ -116,10 +118,11 @@ def saveImage(img, filename):
     with open(filename, 'wb') as file:
         file.write(blob)
 
-def processImage(img, k_enh, σ_enh, σ_noise):
+def processImage(img, k_enh, σ_enh, σ_noise, threshold):
     """Wavelet filter the provided numpy image array and return the result."""
     depth = img.shape[2]
     layer = np.empty_like(img)
+    img = np.fmax(threshold, img) - threshold
     for ch in range(0, depth):
         layer[:,:,ch] = ndimage.gaussian_filter(img[:,:,ch], sigma=σ_noise)
         layer[:,:,ch] -= ndimage.gaussian_filter(layer[:,:,ch], sigma=σ_enh)
@@ -194,6 +197,8 @@ class HelpWidget(QWidget):
           <li>denoise the image by dragging left/right,</li>
           <li>set the finesse of enhancement by dragging left/right
               while also holding the right mouse button.</li>
+          <li>set the threshold value by dragging up/down
+              while also holding the right mouse button.</li>
           </ul>
         <li>Hold Shift while dragging for greater precision.</li>
         <li>Zoom using mouse wheel or +/- keys.</li>
@@ -234,8 +239,9 @@ class LabelsWidget(QWidget):
         self._klabel = OpaqueLabel()
         self._elabel = OpaqueLabel()
         self._nlabel = OpaqueLabel()
+        self._tlabel = OpaqueLabel()
         self._busyLabel = OpaqueLabel("Working...")
-        self.updateLabels(0.0, 0.0, 0.0)
+        self.updateLabels(0.0, 0.0, 0.0, 0.0)
         self.setLayout(QHBoxLayout())
         self.layout().setAlignment(Qt.AlignTop | Qt.AlignLeft)
         col = QVBoxLayout()
@@ -243,6 +249,7 @@ class LabelsWidget(QWidget):
         col.addWidget(self._elabel)
         col.addWidget(self._nlabel)
         col.addWidget(self._dlabel)
+        col.addWidget(self._tlabel)
         col.addWidget(self._busyLabel)
         self.layout().addLayout(col)
         self._dlabel.setVisible(False)
@@ -255,15 +262,17 @@ class LabelsWidget(QWidget):
     def showBusy(self, busy):
         self._busyLabel.setVisible(busy)
 
-    def updateLabels(self, k_enh, σ_enh, σ_noise):
+    def updateLabels(self, k_enh, σ_enh, σ_noise, threshold):
         self._klabel.setText(self._klabelText.format(k_enh))
         self._elabel.setText(self._elabelText.format(σ_enh))
         self._nlabel.setText(self._nlabelText.format(σ_noise))
+        self._tlabel.setText(self._tlabelText.format(threshold))
 
     _depthText = "Image depth: {}-bit"
     _klabelText = "Enhancement k: " + _k_enh_prec
     _elabelText = "Enhancement σ: " + _σ_enh_prec
     _nlabelText = "Denoising σ: " + _σ_noise_prec
+    _tlabelText = "Threshold: " + _th_prec
 
 class ImageEnhancer(QGraphicsView):
     def __init__(self, imagefile):
@@ -299,6 +308,7 @@ class ImageEnhancer(QGraphicsView):
         self._k_enh = _k_enh_default
         self._σ_enh = _σ_enh_default
         self._σ_noise = _σ_noise_default
+        self._th = _th_default
         self._exp_factor = 200.
         self._lastPos = QPoint()
         self._doUpdate = False
@@ -333,12 +343,13 @@ class ImageEnhancer(QGraphicsView):
             self._saved = False
             dp = event.pos() - self._lastPos
             self._lastPos = event.pos()
-            self._k_enh *= 10**(-dp.y() / self._exp_factor)
             if event.buttons() & Qt.RightButton:
+                self._th *= 10**(-dp.y() / self._exp_factor)
                 self._σ_enh *= 10**(dp.x() / self._exp_factor)
             else:
+                self._k_enh *= 10**(-dp.y() / self._exp_factor)
                 self._σ_noise *= 10**(dp.x() / self._exp_factor)
-            self._overlay.updateLabels(self._k_enh, self._σ_enh, self._σ_noise)
+            self._overlay.updateLabels(self._k_enh, self._σ_enh, self._σ_noise, self._th)
             self.updateImage()
             event.accept()
         super().mouseMoveEvent(event)
@@ -396,7 +407,8 @@ class ImageEnhancer(QGraphicsView):
             self._k_enh = _k_enh_default
             self._σ_enh = _σ_enh_default
             self._σ_noise = _σ_noise_default
-            self._overlay.updateLabels(0.0, 0.0, 0.0)
+            self._th = _th_default
+            self._overlay.updateLabels(0.0, 0.0, 0.0, 0.0)
             self._saved = True
             self.updateImage()
         else:
@@ -414,7 +426,7 @@ class ImageEnhancer(QGraphicsView):
     def saveImage(self):
         candidate, ext = os.path.splitext(self._filename)
         candidate = candidate + _filename_fmtstring + '.tiff'
-        candidate = candidate.format(self._k_enh, self._σ_enh, self._σ_noise)
+        candidate = candidate.format(self._k_enh, self._σ_enh, self._σ_noise, self._th)
         namefilter = 'TIFF files (*.tiff)'
         filename = QFileDialog.getSaveFileName(self, "Save Image", candidate, namefilter)
         if len(filename) > 0:
@@ -431,7 +443,7 @@ class ImageEnhancer(QGraphicsView):
 
     def updateImage(self):
         if not self._processor.isRunning():
-            self._processor.apply(self._k_enh, self._σ_enh, self._σ_noise)
+            self._processor.apply(self._k_enh, self._σ_enh, self._σ_noise, self._th)
             self._overlay.showBusy(True)
         else:
             self._doUpdate = True
