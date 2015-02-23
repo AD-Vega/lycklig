@@ -195,11 +195,15 @@ class HelpWidget(QWidget):
           <ul>
           <li>enhance the image by dragging up/down,</li>
           <li>denoise the image by dragging left/right,</li>
+          <li>set the threshold value by dragging left/right
+              while also holding the right mouse button.</li>
+          </ul></li>
+        <li>Right-click and drag to:
+          <ul>
+          <li>enhance the image by dragging up/down,</li>
           <li>set the finesse of enhancement by dragging left/right
               while also holding the right mouse button.</li>
-          <li>set the threshold value by dragging up/down
-              while also holding the right mouse button.</li>
-          </ul>
+          </ul></li>
         <li>Hold Shift while dragging for greater precision.</li>
         <li>Zoom using mouse wheel or +/- keys.</li>
         <li>Press = or 0 to unzoom.</li>
@@ -310,6 +314,7 @@ class ImageEnhancer(QGraphicsView):
         self._σ_noise = _σ_noise_default
         self._th = _th_default
         self._exp_factor = 200.
+        self._exp_reduction_factor = 5.
         self._lastPos = QPoint()
         self._doUpdate = False
         self._saved = True
@@ -320,7 +325,7 @@ class ImageEnhancer(QGraphicsView):
         self._processor.finished.connect(self.drawImage)
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton and not self._doNotOperate:
+        if event.button() != Qt.MiddleButton and not self._doNotOperate:
             self.setDragMode(QGraphicsView.NoDrag)
             self._lastPos = event.pos()
             self._help.setVisible(False)
@@ -330,25 +335,34 @@ class ImageEnhancer(QGraphicsView):
         super().mousePressEvent(event)
 
     def mouseReleaseEvent(self, event):
-        if event.button() == Qt.LeftButton:
-            self.setDragMode(QGraphicsView.ScrollHandDrag)
-            self._lastPos = QPoint()
-            event.accept()
-        elif event.button() == Qt.MiddleButton:
+        if event.button() == Qt.MiddleButton:
             event = QMouseEvent(event.type(), event.pos(), Qt.LeftButton, Qt.LeftButton, event.modifiers())
+        else:
+            self.setDragMode(QGraphicsView.ScrollHandDrag)
         super().mouseReleaseEvent(event)
 
     def mouseMoveEvent(self, event):
-        if event.buttons() & Qt.LeftButton and not self._doNotOperate:
+        doUpdate = False
+        if not self._doNotOperate and \
+          (event.buttons() & Qt.LeftButton or event.buttons() & Qt.RightButton):
+            doUpdate = True
             self._saved = False
             dp = event.pos() - self._lastPos
             self._lastPos = event.pos()
+            xfactor = 10**(dp.x() / self._exp_factor)
+            yfactor = 10**(-dp.y() / self._exp_factor)
+            enhfactor = 10**(dp.x() / self._exp_factor / self._exp_reduction_factor)
+        if event.buttons() & Qt.LeftButton and not self._doNotOperate:
             if event.buttons() & Qt.RightButton:
-                self._th *= 10**(-dp.y() / self._exp_factor)
-                self._σ_enh *= 10**(dp.x() / self._exp_factor)
+                self._k_enh *= yfactor
+                self._th *= xfactor
             else:
-                self._k_enh *= 10**(-dp.y() / self._exp_factor)
-                self._σ_noise *= 10**(dp.x() / self._exp_factor)
+                self._k_enh *= yfactor
+                self._σ_noise *= xfactor
+        elif event.buttons() & Qt.RightButton and not self._doNotOperate:
+                self._k_enh *= yfactor
+                self._σ_enh *= enhfactor
+        if doUpdate:
             self._overlay.updateLabels(self._k_enh, self._σ_enh, self._σ_noise, self._th)
             self.updateImage()
             event.accept()
@@ -399,7 +413,7 @@ class ImageEnhancer(QGraphicsView):
         elif event.key() == Qt.Key_0 or event.key() == Qt.Key_Equal:
             self.zoom(None)
         elif event.key() == Qt.Key_Shift:
-            self._exp_factor *= 5.
+            self._exp_factor *= self._exp_reduction_factor
         elif event.key() == Qt.Key_Tab and not event.isAutoRepeat():
             self._doNotOperate = True
             self._pic.setPixmap(self._pixmap)
@@ -416,7 +430,7 @@ class ImageEnhancer(QGraphicsView):
 
     def keyReleaseEvent(self, event):
         if event.key() == Qt.Key_Shift:
-            self._exp_factor /= 5.
+            self._exp_factor /= self._exp_reduction_factor
         elif event.key() == Qt.Key_Tab and not event.isAutoRepeat():
             self._doNotOperate = False
             self._pic.setPixmap(self._newpixmap)
