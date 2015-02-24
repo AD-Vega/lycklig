@@ -533,6 +533,8 @@ if __name__ == '__main__':
                         help='Enhancement σ parameter.')
     parser.add_argument('-n', type=nonneg, required=True,
                         help='Noise σ parameter.')
+    parser.add_argument('-t', type=nonneg, required=True,
+                        help='Threshold.')
     parser.add_argument('-o', type=str, required=False, default=None,
                         help='Output directory.')
     parser.add_argument('-r', action='store_true', required=False, default=False,
@@ -553,7 +555,7 @@ if __name__ == '__main__':
         def rename(name):
             destfile, ext = os.path.splitext(name)
             destfile = destfile + _filename_fmtstring + ext
-            destfile = destfile.format(args.k, args.s, args.n)
+            destfile = destfile.format(args.k, args.s, args.n, args.t)
             return destfile
 
         if args.o is None:
@@ -567,7 +569,7 @@ if __name__ == '__main__':
                 destfile = rename(destfile)
             destfile = args.o + '/' + destfile
         img, depth = loadImage(filename)
-        img = processImage(img, args.k, args.s, args.n)
+        img = processImage(img, args.k, args.s, args.n, args.t)
         saveImage(img, destfile)
 
     pool = Pool()
