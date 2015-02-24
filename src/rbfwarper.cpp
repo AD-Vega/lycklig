@@ -51,7 +51,7 @@ rbfWarper::rbfWarper(const patchCollection& patches_,
 
 void rbfWarper::gauss1d(float* ptr, const Range& range, const float sigma) const {
   const float sigmasq = sigma*sigma;
-  for (int x = range.start; x < range.end; x++)
+  for (int x = range.start; x <= range.end; x++)
     *(ptr++) = exp(-0.5*(x*x)/sigmasq);
 }
 
