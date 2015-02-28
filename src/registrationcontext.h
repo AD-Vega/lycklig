@@ -38,6 +38,33 @@ public:
 void write(cv::FileStorage& fs, const std::string&, const inputImage& image);
 
 
+// This class acts as a proxy that tracks the validity of the contained
+// object.
+template <typename T>
+class managed {
+public:
+  managed() = default;
+  managed(const T& initialValue) : value(initialValue) {}
+
+  inline const T& operator()() const { return value; }
+  inline T& operator()() { return value; }
+  inline bool valid() const { return isValid; }
+
+  void operator()(T newValue) {
+    value = std::move(newValue);
+    isValid = true; }
+
+  void invalidate() {
+    value = T();
+    isValid = false;
+  }
+
+private:
+  T value;
+  bool isValid = false;
+};
+
+
 class registrationContext {
 public:
   registrationContext() = default;
@@ -45,63 +72,21 @@ public:
   void write(cv::FileStorage& fs) const;
   void printReport() const;
 
-  // accessors
-  inline cv::Size imagesize() const { return priv_imagesize; }
-  inline int boxsize() const { return priv_boxsize; }
-  inline std::vector<inputImage>& images() { return priv_images; }
-  inline const std::vector<inputImage>& images() const { return priv_images; }
-  inline cv::Rect commonRectangle() const { return priv_commonRectangle; }
-  inline const cv::Mat& refimg() const { return priv_refimg; }
-  inline const patchCollection& patches() const { return priv_patches; }
-  inline const std::vector<cv::Mat1f>& shifts() const { return priv_shifts; }
-
-  // modificators
-  void imagesize(cv::Size new_size);
-  void boxsize(int new_boxsize);
-  void images(std::vector<inputImage>& new_images);
-  void commonRectangle(cv::Rect new_commonRectangle);
-  void refimg(cv::Mat& new_refimg);
-  void patches(patchCollection& new_patches);
-  void shifts(std::vector<cv::Mat1f>& new_shifts);
+  managed<cv::Size> imagesize;
+  managed<int> boxsize;
+  managed<std::vector<inputImage>> images;
+  managed<cv::Rect> commonRectangle;
+  managed<cv::Mat> refimg;
+  managed<patchCollection> patches;
+  managed<std::vector<cv::Mat1f>> shifts;
 
   void clearRefimgEtc();
   void clearPatchesEtc();
   void clearShiftsEtc();
 
-  // checks
-  inline bool imagesizeValid() const { return imagesize_valid; }
-  inline bool boxsizeValid() const { return boxsize_valid; }
-  inline bool imagesValid() const { return images_valid; }
-  inline bool commonRectangleValid() const { return commonRectangle_valid; }
-  inline bool refimgValid() const { return refimg_valid; }
-  inline bool patchesValid() const { return patches_valid; }
-  inline bool shiftsValid() const { return shifts_valid; }
-
   // convenience methods
   inline cv::Rect refimgRectangle() const
-    { return cv::Rect(cv::Point(0, 0), priv_refimg.size()); }
-
-private:
-  cv::Size priv_imagesize;
-  bool imagesize_valid = false;
-
-  int priv_boxsize = 0;
-  bool boxsize_valid = false;
-
-  std::vector<inputImage> priv_images;
-  bool images_valid = false;
-
-  cv::Rect priv_commonRectangle = cv::Rect(0, 0, 0, 0);
-  bool commonRectangle_valid = false;
-
-  cv::Mat priv_refimg;
-  bool refimg_valid = false;
-
-  patchCollection priv_patches;
-  bool patches_valid = false;
-
-  std::vector<cv::Mat1f> priv_shifts;
-  bool shifts_valid = false;
+    { return cv::Rect(cv::Point(0, 0), refimg().size()); }
 };
 
 void write(cv::FileStorage& fs,

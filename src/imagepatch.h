@@ -64,7 +64,6 @@ public:
   // are applicable to the image of a given size and position (imageRect).
   // The returned rectangle is never smaller than the image itself.
    cv::Rect searchAreaForImage(const cv::Rect imageRect) const;
-   void invalidate();
 
    // Area of the reference image on which the patches were collected.
    cv::Rect patchCreationArea = cv::Rect(0, 0, 0, 0);

@@ -299,7 +299,7 @@ Mat lucky(const registrationParams& params,
           const bool showProgress)
 {
   Rect outputRectangle = Rect(Point(0, 0), context.imagesize());
-  if (params.crop && context.commonRectangleValid())
+  if (params.crop && context.commonRectangle.valid())
     outputRectangle = context.commonRectangle();
 
   const Mat& refimg = context.refimg();
@@ -311,7 +311,7 @@ Mat lucky(const registrationParams& params,
     allShifts.resize(context.images().size());
     refsqLookup = imageSumLookup(refimg.mul(refimg));
   }
-  else if (params.stage_stack && context.shiftsValid()) {
+  else if (params.stage_stack && context.shifts.valid()) {
     // Use shifts from a state file, if they are available.
     allShifts = context.shifts();
   }
@@ -402,7 +402,7 @@ Mat lucky(const registrationParams& params,
 
       // STACKING: main operation
       if (params.stage_stack) {
-        const Mat1f shifts(params.stage_lucky || context.shiftsValid() ?
+        const Mat1f shifts(params.stage_lucky || context.shifts.valid() ?
                            allShifts.at(ifile) : Mat());
         Mat warpedImg, warpedNormalization;
         std::tie(warpedImg, warpedNormalization) =

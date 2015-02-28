@@ -55,7 +55,7 @@ int main(const int argc, const char *argv[]) {
     context.printReport();
     std::cerr << std::endl;
 
-    if (context.boxsizeValid() && !params.boxsize_override)
+    if (context.boxsize.valid() && !params.boxsize_override)
       params.boxsize = context.boxsize();
   }
   else {
@@ -101,7 +101,7 @@ int main(const int argc, const char *argv[]) {
   // reference image
   Mat rawRef;
   if (params.stage_refimg || params.only_refimg ||
-      (need_refimg && !context.refimgValid())) {
+      (need_refimg && !context.refimg.valid())) {
     std::cerr << "Creating a stacked reference image\n";
     // This creates a color image. See below for implications.
     rawRef = meanimg(context, true);
@@ -112,7 +112,7 @@ int main(const int argc, const char *argv[]) {
               << params.output_file << "'\n";
 
     Mat outputImage = rawRef;
-    if (context.commonRectangleValid() && params.crop)
+    if (context.commonRectangle.valid() && params.crop)
     {
       // save only the region that is common to all input images
       outputImage = rawRef(context.commonRectangle());
@@ -128,7 +128,7 @@ int main(const int argc, const char *argv[]) {
   //   a) the creation of a new reference image was explicitly requested
   //   b) we currently don't have one, but need it in further stages
   // Note that params.only_refimg does not imply any of these!
-  if (params.stage_refimg || (need_refimg && !context.refimgValid())) {
+  if (params.stage_refimg || (need_refimg && !context.refimg.valid())) {
     // Save the black&white reference image to context.
     Mat refimg;
     if (rawRef.channels() > 1)
@@ -146,7 +146,7 @@ int main(const int argc, const char *argv[]) {
   // Check whether we need to override context.boxsize() with a value from
   // the command line. If there is a conflict, we invalidate any further data
   // (registration points, lucky imaging shifts).
-  if (need_patches && params.boxsize_override && context.boxsizeValid() &&
+  if (need_patches && params.boxsize_override && context.boxsize.valid() &&
       params.boxsize != context.boxsize()) {
     std::cerr << "New boxsize specified on the command line\n";
     context.clearPatchesEtc();
@@ -154,7 +154,7 @@ int main(const int argc, const char *argv[]) {
 
   // Where to create the registration points.
   Rect patchCreationArea = context.refimgRectangle();
-  if (params.crop && context.commonRectangleValid()) {
+  if (params.crop && context.commonRectangle.valid()) {
     // The reference image is usually larger than commonRectangle and we can
     // expand the patch creation area so that the reference points are placed
     // right on the edge of commonRectangle.
@@ -168,7 +168,7 @@ int main(const int argc, const char *argv[]) {
 
   // If we have the registration points already, check that they were created
   // with the same crop option.
-  if (need_patches && context.patchesValid() &&
+  if (need_patches && context.patches.valid() &&
       patchCreationArea != context.patches().patchCreationArea)
   {
     std::cerr << "Existing registration points were created with different crop settings\n";
@@ -176,7 +176,7 @@ int main(const int argc, const char *argv[]) {
   }
 
   // lucky imaging registration points
-  if (params.stage_patches || (need_patches && !context.patchesValid())) {
+  if (params.stage_patches || (need_patches && !context.patches.valid())) {
     context.boxsize(params.boxsize);
 
     std::cerr << "Lucky imaging: creating registration patches\n";
@@ -194,7 +194,7 @@ int main(const int argc, const char *argv[]) {
       std::cerr << "Lucky imaging: registration, warping and stacking\n";
     else if (params.stage_lucky)
       std::cerr << "Lucky imaging: registration\n";
-    else if (params.stage_stack && context.shiftsValid())
+    else if (params.stage_stack && context.shifts.valid())
       std::cerr << "Stacking images (using data from lucky imaging)\n";
     else if (params.stage_stack)
       std::cerr << "Stacking images (no lucky imaging)\n";
