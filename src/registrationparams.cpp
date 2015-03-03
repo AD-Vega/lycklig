@@ -145,6 +145,7 @@ bool registrationParams::parse(const int argc, const char* argv[])
       return false;
     }
 
+    prereg_maxmove = arg_prereg_maxmove.getValue();
     boxsize_override = arg_boxsize.isSet();
     boxsize = arg_boxsize.getValue();
     crop = arg_crop.isSet();
