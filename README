@@ -41,6 +41,12 @@ source directory:
   make
   sudo make install
 
+If you are using MacOS X and have installed dependencies from homebrew
+or compiled them with clang, first install clang-omp, then replace the
+cmake command with
+
+  CC=clang-omp CXX=clang-omp++ cmake ..
+
 You can skip the "make install" step and run lycklig from the build
 directory directly, although there might be problems with localization
 and icon loading for kinky's graphical interface.
