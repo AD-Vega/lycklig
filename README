@@ -16,9 +16,9 @@ lycklig can:
     * use supersampling to increase resolution;
     * save intermediate data to avoid recomputing it later.
 
-Homepage: https://gitorious.org/adv/lycklig/
+Homepage: https://github.com/AD-Vega/lycklig
 
-See also: https://gitorious.org/adv/arif/
+See also: https://github.com/AD-Vega/arif
           arif can pre-align and filter images by quality, estimating
           the bluriness caused by the atmosphere.
 
