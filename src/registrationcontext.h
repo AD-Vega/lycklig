@@ -44,7 +44,7 @@ template <typename T>
 class managed {
 public:
   managed() = default;
-  managed(const T& initialValue) : value(initialValue) {}
+  managed(const T& initialValue) : value(initialValue), isValid(true) {}
 
   inline const T& operator()() const { return value; }
   inline T& operator()() { return value; }
