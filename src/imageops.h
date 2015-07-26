@@ -37,6 +37,9 @@ private:
 
 cv::Mat magickImread(const std::string& filename);
 
+// Write a matrix of type CV_16U or CV_16UC3 to file via imageMagick.
+void magickImwrite16U(const std::string& filename, const cv::Mat& cvImage);
+
 void writeTestImage(const std::string& path);
 
 void sRGB2linearRGB(cv::Mat& img);

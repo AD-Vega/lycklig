@@ -137,7 +137,7 @@ int main(const int argc, const char *argv[]) {
       outputImage = rawRef(context.commonRectangle());
     }
     // This saves the color image.
-    imwrite(params.output_file, normalizeTo16Bits(outputImage));
+    magickImwrite16U(params.output_file, normalizeTo16Bits(outputImage));
   }
 
   // From now on, we will only store a black&white version of the reference
@@ -222,7 +222,7 @@ int main(const int argc, const char *argv[]) {
     // Only save the result if there is something to save.
     if (params.stage_stack) {
       std::cerr << "Saving output to '" << params.output_file << "'\n";
-      imwrite(params.output_file, normalizeTo16Bits(finalsum));
+      magickImwrite16U(params.output_file, normalizeTo16Bits(finalsum));
     }
   }
 

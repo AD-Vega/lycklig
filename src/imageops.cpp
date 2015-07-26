@@ -46,6 +46,23 @@ Mat magickImread(const std::string& filename)
 }
 
 
+void magickImwrite16U(const std::string& filename, const Mat& cvImage) {
+  std::string map;
+  switch (cvImage.channels()) {
+    case 1:
+      map = "I"; break;
+    case 3:
+      map = "BGR"; break;
+    default:
+      std::cerr << "Don't know how to write images that have neither 1 nor 3 channels.\n";
+      return;
+  }
+  Magick::Image image(cvImage.cols, cvImage.rows,
+                      map, Magick::ShortPixel, cvImage.data);
+  image.write(filename);
+}
+
+
 // Generates a test filename by prepending the true filename with the program
 // name and a string of random hex characters.
 std::string generateTestFilename(const std::string& origPath) {
