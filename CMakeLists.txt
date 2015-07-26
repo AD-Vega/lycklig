@@ -4,6 +4,7 @@ cmake_minimum_required(VERSION 2.8)
 find_package(OpenCV REQUIRED)
 include(FindPkgConfig)
 pkg_check_modules(PKGCONFS REQUIRED tclap Magick++)
+find_package(Boost REQUIRED COMPONENTS filesystem system)
 
 macro(set_prefixed varname string)
   set(${varname})
@@ -21,7 +22,7 @@ set_prefixed(lycklig_SRCS src/ cookedtemplate.cpp globalregistrator.cpp
              imageops.cpp imagepatch.cpp lucky.cpp main.cpp rbfwarper.cpp
              registrationcontext.cpp registrationparams.cpp)
 add_executable(lycklig ${lycklig_SRCS})
-target_link_libraries(lycklig ${OpenCV_LIBS} ${PKGCONFS_LDFLAGS})
+target_link_libraries(lycklig ${OpenCV_LIBS} ${PKGCONFS_LDFLAGS} ${Boost_LIBRARIES})
 
 install(TARGETS lycklig RUNTIME DESTINATION bin)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/kinky/kinky.py

@@ -22,6 +22,7 @@
 #include <string>
 #include <algorithm>
 #include <omp.h>
+#include <Magick++.h>
 #include "imageops.h"
 #include "lucky.h"
 #include "globalregistrator.h"
@@ -46,6 +47,24 @@ int main(const int argc, const char *argv[]) {
   // Resolve stage dependencies.
   bool need_patches = params.stage_patches || params.stage_lucky;
   bool need_refimg = params.stage_refimg || need_patches;
+
+  // If an output image will be created, check whether the destination can
+  // actually be written to.
+  if (params.only_refimg || params.stage_stack) {
+    std::cerr << "Creating a dummy image to see if the destination is writable... ";
+    try {
+      writeTestImage(params.output_file);
+      std::cerr << "success.\n";
+    }
+    catch (Magick::Exception& e) {
+      std::cerr << "FAILED!\n"
+      "Possible reasons include insufficient permissions for writing to the output\n"
+      "directory or a failure to specify the output image format (missing file\n"
+      "extension, perhaps?).\n";
+      std::cerr << e.what() << std::endl;
+      return 1;
+    }
+  }
 
   // Load a state file if one was supplied.
   if (!params.read_state_file.empty()) {

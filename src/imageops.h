@@ -23,7 +23,6 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <string>
-#include <Magick++.h>
 #include "registrationparams.h"
 #include "registrationcontext.h"
 
@@ -37,6 +36,8 @@ private:
 };
 
 cv::Mat magickImread(const std::string& filename);
+
+void writeTestImage(const std::string& path);
 
 void sRGB2linearRGB(cv::Mat& img);
 

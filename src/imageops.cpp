@@ -16,7 +16,10 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <cstdio>
 #include <limits>
+#include <Magick++.h>
+#include <boost/filesystem.hpp>
 #include "imageops.h"
 #include "globalregistrator.h"
 
@@ -40,6 +43,27 @@ Mat magickImread(const std::string& filename)
   }
   sRGB2linearRGB(output);
   return output;
+}
+
+
+// Generates a test filename by prepending the true filename with the program
+// name and a string of random hex characters.
+std::string generateTestFilename(const std::string& origPath) {
+  namespace bf = boost::filesystem;
+  bf::path path(origPath);
+  bf::path dir = path.parent_path();
+  std::string filename = path.filename().string();
+  std::string randomPrefix = bf::unique_path("lycklig-%%%%%%%%-").string();
+  bf::path  newPath = dir / bf::path(randomPrefix + filename);
+  return newPath.string();
+}
+
+
+void writeTestImage(const std::string& path) {
+  Magick::Image img(Magick::Geometry(1, 1), Magick::ColorGray(1.0));
+  std::string testfile(generateTestFilename(path));
+  img.write(testfile);
+  std::remove(testfile.c_str());
 }
 
 
