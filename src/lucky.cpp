@@ -18,6 +18,7 @@
 
 #include <iostream>
 #include <algorithm>
+#include <tuple>
 #include "imageops.h"
 #include "lucky.h"
 

@@ -17,6 +17,7 @@
  */
 
 #include <cstdio>
+#include <iostream>
 #include <limits>
 #include <Magick++.h>
 #include <boost/filesystem.hpp>
@@ -122,7 +123,7 @@ void linearRGB2sRGB(Mat& img) {
 }
 
 
-Mat grayReader::read(const string& file) {
+Mat grayReader::read(const std::string& file) {
   Mat img = magickImread(file.c_str());
   if (img.channels() > 1) {
     // colour image: convert to gray
