@@ -35,7 +35,7 @@ public:
   float globalMultiplier;
 };
 
-void write(cv::FileStorage& fs, const std::string&, const inputImage& image);
+void write(cv::FileStorage& fs, const cv::String&, const inputImage& image);
 
 
 // This class acts as a proxy that tracks the validity of the contained
@@ -90,7 +90,7 @@ public:
 };
 
 void write(cv::FileStorage& fs,
-           const std::string&,
+           const cv::String&,
            const registrationContext& context);
 
 #endif // REGISTRATIONCONTEXT_H

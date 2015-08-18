@@ -40,7 +40,7 @@ void inputImage::write(cv::FileStorage& fs) const {
 }
 
 
-void write(cv::FileStorage& fs, const std::string&, const inputImage& image) {
+void write(cv::FileStorage& fs, const cv::String&, const inputImage& image) {
   image.write(fs);
 }
 
@@ -119,7 +119,7 @@ void registrationContext::clearShiftsEtc() {
 
 
 void write(cv::FileStorage& fs,
-           const std::string&,
+           const cv::String&,
            const std::vector<inputImage>& images) {
   fs << "[";
   for (auto& image : images)
@@ -128,7 +128,7 @@ void write(cv::FileStorage& fs,
 }
 
 void write(cv::FileStorage& fs,
-           const std::string&,
+           const cv::String&,
            const patchCollection& patches) {
   fs << "[";
   for (auto& patch : patches)
@@ -155,7 +155,7 @@ void registrationContext::write(cv::FileStorage& fs) const {
 }
 
 void write(cv::FileStorage& fs,
-           const std::string&,
+           const cv::String&,
            const registrationContext& context) {
   context.write(fs);
 }

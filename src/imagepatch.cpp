@@ -42,7 +42,7 @@ void imagePatchPosition::write(cv::FileStorage& fs) const {
 
 
 void write(cv::FileStorage& fs,
-           const std::string&,
+           const cv::String&,
            const imagePatchPosition& patch) {
   patch.write(fs);
 }

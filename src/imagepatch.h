@@ -36,7 +36,7 @@ public:
 };
 
 void write(cv::FileStorage& fs,
-           const std::string&,
+           const cv::String&,
            const imagePatchPosition& patch);
 
 
