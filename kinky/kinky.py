@@ -554,7 +554,8 @@ if __name__ == '__main__':
     def batchProcess(filename):
         def rename(name):
             destfile, ext = os.path.splitext(name)
-            destfile = destfile + _filename_fmtstring + ext
+            # TODO: allow other image formats
+            destfile = destfile + _filename_fmtstring + ".tiff"
             destfile = destfile.format(args.k, args.s, args.n, args.t)
             return destfile
 
