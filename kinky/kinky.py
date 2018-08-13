@@ -22,7 +22,7 @@ from PyQt5.QtWidgets import QApplication, QGraphicsView, QGraphicsScene, \
     QGridLayout, QVBoxLayout, QHBoxLayout, QStackedLayout, QLabel, QWidget, \
     QFileDialog, QMessageBox
 from PyQt5.QtGui import QImage, QTransform, QPixmap, QTextDocument, qRgb, \
-    QPalette, QIcon
+    QPalette, QIcon, QMouseEvent
 from PyQt5.QtCore import Qt, QEvent, QPoint, QTimer, QSize, QThread
 from base64 import b64decode, b64encode
 from scipy import ndimage
@@ -350,7 +350,7 @@ class ImageEnhancer(QGraphicsView):
 
     def wheelEvent(self, event):
         event.accept()
-        self.zoom(event.delta() > 0)
+        self.zoom(event.angleDelta().y() > 0)
 
     def closeEvent(self, event):
         if (self._saved is None):
