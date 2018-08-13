@@ -39,6 +39,8 @@ _th_prec = '{:1.0f}'
 _filename_fmtstring = "_k{}_sigma{}_noise{}_thresh{}"
 _filename_fmtstring = _filename_fmtstring.format(_k_enh_prec, _σ_enh_prec,
                                                  _σ_noise_prec, _th_prec)
+_filename_filter_open = 'Image files (*.png *.tiff *.tif *.ppm *.pnm *.pgm *.pbm *.webp *.jpg *.jpeg *.jp2 *.bmp *.dib)'
+_filename_filter_save = 'Image files (*.png *.tiff *.tif *.jp2)'
 
 _k_enh_default = 1.0
 _σ_enh_default = 0.25
@@ -413,8 +415,8 @@ class ImageEnhancer(QGraphicsView):
         candidate, ext = os.path.splitext(self._filename)
         candidate = candidate + _filename_fmtstring + '.tiff'
         candidate = candidate.format(self._k_enh, self._σ_enh, self._σ_noise, self._th)
-        namefilter = 'TIFF files (*.tiff)'
-        filename = QFileDialog.getSaveFileName(self, "Save Image", candidate, namefilter)
+        filename = QFileDialog.getSaveFileName(self, "Save Image", candidate, _filename_filter_save)
+        filename = filename[0]
         if len(filename) > 0:
             error = ''
             try:
@@ -463,8 +465,7 @@ if __name__ == '__main__':
             if len(sys.argv) == 2:
                 enh = ImageEnhancer(sys.argv[1])
             else:
-                namefilter = 'Image files (*.png *.tiff *.ppm *.pnm *.pgm *.jpg *.bmp)'
-                filename = QFileDialog.getOpenFileName(None, "Open file", '', namefilter)
+                filename = QFileDialog.getOpenFileName(None, "Open file", '', _filename_filter_open)
                 filename = filename[0]
                 if filename != '':
                     enh = ImageEnhancer(filename)
