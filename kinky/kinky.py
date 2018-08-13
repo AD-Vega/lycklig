@@ -79,7 +79,9 @@ def numpy2QImage(arrayImage):
 def loadImage(filename):
     """Read the provided file and return the image as a numpy.ndarray of
     shape (height, width, colors)."""
-    img = cv2.imread(filename)
+    img = cv2.imread(filename, cv2.IMREAD_ANYDEPTH + cv2.IMREAD_ANYCOLOR)
+    if len(img.shape) != 3:
+        img = img.reshape(*img.shape, 1)
     return img, 8 * img.dtype.itemsize
 
 def saveImage(img, filename):
