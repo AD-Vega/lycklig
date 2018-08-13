@@ -18,18 +18,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from PyQt4.QtGui import QApplication, QGraphicsView, QGraphicsScene, QPixmap, QImage, \
+from PyQt5.QtWidgets import QApplication, QGraphicsView, QGraphicsScene, \
     QGridLayout, QVBoxLayout, QHBoxLayout, QStackedLayout, QLabel, QWidget, \
-    QPalette, QFileDialog, QMessageBox, QTransform, QTextDocument, QMouseEvent, qRgb, \
-    QIcon
-from PyQt4.QtCore import Qt, QEvent, QPoint, QTimer, QSize, QThread
+    QFileDialog, QMessageBox
+from PyQt5.QtGui import QImage, QTransform, QPixmap, QTextDocument, qRgb, \
+    QPalette, QIcon
+from PyQt5.QtCore import Qt, QEvent, QPoint, QTimer, QSize, QThread
 from base64 import b64decode, b64encode
 from scipy import ndimage
 from argparse import ArgumentParser, ArgumentTypeError
 from multiprocessing import Process, Pipe, Pool
 import numpy as np
-from wand.image import Image
-from wand.sequence import Sequence
 import sys, os, math
 
 _k_enh_prec = '{:.5g}'
@@ -79,19 +78,19 @@ def numpy2QImage(arrayImage):
 def loadImage(filename):
     """Read the provided file and return the image as a numpy.ndarray of
     shape (height, width, colors)."""
-    image = Image(filename=filename)
-    width, height = image.size
-    depth = image.depth
-    if image.colorspace == 'gray':
-        channs = 1
-        fmt = 'gray'
-    else:
-        channs = 3
-        fmt = 'RGB'
-    image.depth = 16
-    img = np.ndarray((height, width, channs), dtype='uint16',
-                     buffer=image.make_blob(fmt))
-    return img.astype('float'), depth
+    # image = Image(filename=filename)
+    # width, height = image.size
+    # depth = image.depth
+    # if image.colorspace == 'gray':
+    #     channs = 1
+    #     fmt = 'gray'
+    # else:
+    #     channs = 3
+    #     fmt = 'RGB'
+    # image.depth = 16
+    # img = np.ndarray((height, width, channs), dtype='uint16',
+    #                  buffer=image.make_blob(fmt))
+    # return img.astype('float'), depth
 
 def saveImage(img, filename):
     """Read the provided numpy.ndarray of shape (height, width, colors), convert
@@ -105,18 +104,18 @@ def saveImage(img, filename):
     u16arr = (img / img.max() * (2**16-1)).astype('uint16')
     # The wand API does not allow construction from raw (unformatted)
     # blobs, so we take the long way around.
-    image = Image(width = width, height = height, format = fmt)
-    image.width = width
-    image.height = height
-    image.format = fmt
-    image.read(blob=bytes(u16arr))
-    seq = Sequence(image)
-    image = Image(seq[-1])
-    if image.depth != 16:
-        raise Exception('Error converting numeric array to 16-bit image.')
-    blob = image.make_blob('tiff')
-    with open(filename, 'wb') as file:
-        file.write(blob)
+    # image = Image(width = width, height = height, format = fmt)
+    # image.width = width
+    # image.height = height
+    # image.format = fmt
+    # image.read(blob=bytes(u16arr))
+    # seq = Sequence(image)
+    # image = Image(seq[-1])
+    # if image.depth != 16:
+    #     raise Exception('Error converting numeric array to 16-bit image.')
+    # blob = image.make_blob('tiff')
+    # with open(filename, 'wb') as file:
+    #     file.write(blob)
 
 def processImage(img, k_enh, σ_enh, σ_noise, threshold):
     """Wavelet filter the provided numpy image array and return the result."""
