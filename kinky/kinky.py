@@ -492,6 +492,7 @@ if __name__ == '__main__':
             else:
                 namefilter = 'Image files (*.png *.tiff *.ppm *.pnm *.pgm *.jpg *.bmp)'
                 filename = QFileDialog.getOpenFileName(None, "Open file", '', namefilter)
+                filename = filename[0]
                 if filename != '':
                     enh = ImageEnhancer(filename)
         except Exception as e:
