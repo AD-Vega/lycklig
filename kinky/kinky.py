@@ -239,6 +239,11 @@ class LabelsWidget(QWidget):
 
     def showBusy(self, busy):
         self._busyLabel.setVisible(busy)
+        if busy:
+            if QApplication.overrideCursor() is None:
+                QApplication.setOverrideCursor(Qt.WaitCursor)
+        else:
+            QApplication.restoreOverrideCursor()
 
     def updateLabels(self, k_enh, σ_enh, σ_noise, threshold):
         self._klabel.setText(self._klabelText.format(k_enh))
