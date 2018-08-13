@@ -85,12 +85,16 @@ def loadImage(filename):
     if len(img.shape) != 3:
         img = img.reshape(*img.shape, 1)
     img = img[:, :, ::-1]
+    img = np.array(img, dtype=float)
     return img, 8 * img.dtype.itemsize
 
 def saveImage(img, filename):
     """Read the provided numpy.ndarray of shape (height, width, colors), convert
     it into a 16-bit integer color format and write it into the provided file. The
     image is always in TIFF format to ensure 16-bit depth."""
+    img = img[:]
+    img *= (2**16 - 1) / np.max(img)
+    img = np.array(img, dtype='uint16')
     cv2.imwrite(filename, img[:, :, ::-1])
 
 def processImage(img, k_enh, σ_enh, σ_noise, threshold):
