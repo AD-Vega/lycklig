@@ -30,6 +30,7 @@ from argparse import ArgumentParser, ArgumentTypeError
 from multiprocessing import Process, Pipe, Pool
 import numpy as np
 import sys, os, math
+import cv2
 
 _k_enh_prec = '{:.5g}'
 _σ_enh_prec = '{:.3f}'
@@ -78,44 +79,14 @@ def numpy2QImage(arrayImage):
 def loadImage(filename):
     """Read the provided file and return the image as a numpy.ndarray of
     shape (height, width, colors)."""
-    # image = Image(filename=filename)
-    # width, height = image.size
-    # depth = image.depth
-    # if image.colorspace == 'gray':
-    #     channs = 1
-    #     fmt = 'gray'
-    # else:
-    #     channs = 3
-    #     fmt = 'RGB'
-    # image.depth = 16
-    # img = np.ndarray((height, width, channs), dtype='uint16',
-    #                  buffer=image.make_blob(fmt))
-    # return img.astype('float'), depth
+    img = cv2.imread(filename)
+    return img, 8 * img.dtype.itemsize
 
 def saveImage(img, filename):
     """Read the provided numpy.ndarray of shape (height, width, colors), convert
     it into a 16-bit integer color format and write it into the provided file. The
     image is always in TIFF format to ensure 16-bit depth."""
-    height, width, channs = img.shape
-    if channs == 3:
-        fmt = 'RGB'
-    else:
-        fmt = 'gray'
-    u16arr = (img / img.max() * (2**16-1)).astype('uint16')
-    # The wand API does not allow construction from raw (unformatted)
-    # blobs, so we take the long way around.
-    # image = Image(width = width, height = height, format = fmt)
-    # image.width = width
-    # image.height = height
-    # image.format = fmt
-    # image.read(blob=bytes(u16arr))
-    # seq = Sequence(image)
-    # image = Image(seq[-1])
-    # if image.depth != 16:
-    #     raise Exception('Error converting numeric array to 16-bit image.')
-    # blob = image.make_blob('tiff')
-    # with open(filename, 'wb') as file:
-    #     file.write(blob)
+    cv2.imwrite(filename, img)
 
 def processImage(img, k_enh, σ_enh, σ_noise, threshold):
     """Wavelet filter the provided numpy image array and return the result."""
