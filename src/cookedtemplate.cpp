@@ -51,7 +51,7 @@ cookedXcor::cookedXcor(const Mat& _templ, Size _corrsize, int _ctype) :
     dftsize.width = std::max(getOptimalDFTSize(blocksize.width + templ.cols - 1), 2);
     dftsize.height = getOptimalDFTSize(blocksize.height + templ.rows - 1);
     if( dftsize.width <= 0 || dftsize.height <= 0 )
-        CV_Error( CV_StsOutOfRange, "the input arrays are too big" );
+        CV_Error( cv::Error::StsOutOfRange, "the input arrays are too big" );
 
     // recompute block size
     blocksize.width = dftsize.width - templ.cols + 1;

@@ -127,7 +127,7 @@ Mat grayReader::read(const std::string& file) {
   Mat img = magickImread(file.c_str());
   if (img.channels() > 1) {
     // colour image: convert to gray
-    cvtColor(img, imggray, CV_BGR2GRAY);
+    cvtColor(img, imggray, COLOR_BGR2GRAY);
     return imggray;
   }
   else {
