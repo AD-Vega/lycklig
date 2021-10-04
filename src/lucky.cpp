@@ -360,7 +360,7 @@ Mat lucky(const registrationParams& params,
       if (params.stage_lucky) {
         Mat1f img;
         if (inputImage.channels() > 1)
-          cvtColor(inputImage, img, CV_BGR2GRAY);
+          cvtColor(inputImage, img, COLOR_BGR2GRAY);
         else
           img = inputImage;
 

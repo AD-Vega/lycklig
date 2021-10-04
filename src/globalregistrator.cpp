@@ -27,15 +27,15 @@ globalRegistrator::globalRegistrator(const Mat& reference, const int maxmove) {
   refImageArea = Mat::zeros(reference.rows + 2*maxmove, reference.cols + 2*maxmove, CV_32F);
   refImageArea(imageRect) = Mat::ones(reference.rows, reference.cols, CV_32F);
   searchMask = Mat::ones(reference.rows, reference.cols, CV_32F);
-  matchTemplate(refImgWithBorder.mul(refImgWithBorder), searchMask, areasq, CV_TM_CCORR);
+  matchTemplate(refImgWithBorder.mul(refImgWithBorder), searchMask, areasq, TM_CCORR);
   originShift = Point(maxmove, maxmove);
 }
 
 
 void globalRegistrator::findShift(inputImage& image, const Mat& pixels)
 {
-  matchTemplate(refImageArea, pixels.mul(pixels), imgsq, CV_TM_CCORR);
-  matchTemplate(refImgWithBorder, pixels, cor, CV_TM_CCORR);
+  matchTemplate(refImageArea, pixels.mul(pixels), imgsq, TM_CCORR);
+  matchTemplate(refImgWithBorder, pixels, cor, TM_CCORR);
   match = areasq - cor.mul(cor).mul(1/imgsq);
   Point minpoint;
   minMaxLoc(match, NULL, NULL, &minpoint);

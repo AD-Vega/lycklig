@@ -151,7 +151,7 @@ int main(const int argc, const char *argv[]) {
     // Save the black&white reference image to context.
     Mat refimg;
     if (rawRef.channels() > 1)
-      cvtColor(rawRef, refimg, CV_BGR2GRAY);
+      cvtColor(rawRef, refimg, COLOR_BGR2GRAY);
     else
       refimg = rawRef;
     context.refimg(refimg);

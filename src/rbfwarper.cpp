@@ -167,8 +167,8 @@ rbfWarper::warp(const Mat& image,
 
   Mat imremap, normremap;
   remap(image, imremap, xField, yField,
-        CV_INTER_LINEAR, BORDER_CONSTANT, 0);
+        INTER_LINEAR, BORDER_CONSTANT, 0);
   remap(normalizationMask, normremap, xField, yField,
-        CV_INTER_LINEAR, BORDER_CONSTANT, 0);
+        INTER_LINEAR, BORDER_CONSTANT, 0);
   return std::pair<Mat, Mat>(imremap, normremap);
 }
