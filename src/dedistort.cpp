@@ -339,7 +339,7 @@ Mat stack(const registrationParams& params,
     std::fprintf(stderr, "0/%ld", context.images().size());
   #pragma omp parallel
   {
-    // LUCKY IMAGING: local initialization
+    // DEDISTORTION: local initialization
     patchMatcher matcher;
     // STACKING: local initialization
     Mat localsum;
@@ -356,7 +356,7 @@ Mat stack(const registrationParams& params,
       const auto& image = context.images().at(ifile);
       Mat inputImage = magickImread(image.filename);
 
-      // LUCKY IMAGING: main operation
+      // DEDISTORTION: main operation
       if (params.stage_dedistort) {
         Mat1f img;
         if (inputImage.channels() > 1)
@@ -431,7 +431,7 @@ Mat stack(const registrationParams& params,
   if (showProgress)
     std::fprintf(stderr, "\n");
 
-  // LUCKY IMAGING: pass the results to registrationContext
+  // DEDISTORTION: pass the results to registrationContext
   if (params.stage_dedistort)
     context.shifts(allShifts);
 

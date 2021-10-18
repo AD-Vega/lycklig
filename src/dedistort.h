@@ -16,8 +16,8 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LUCKY_H
-#define LUCKY_H
+#ifndef DEDISTORT_H
+#define DEDISTORT_H
 
 #include <opencv2/core/core.hpp>
 #include "registrationparams.h"
@@ -79,4 +79,4 @@ cv::Mat stack(const registrationParams& params,
               registrationContext& context,
               const bool showProgress = false);
 
-#endif // LUCKY_H
+#endif // DEDISTORT_H
