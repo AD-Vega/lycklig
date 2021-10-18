@@ -46,9 +46,9 @@ public:
   managed() = default;
   managed(const T& initialValue) : value(initialValue), isValid(true) {}
 
-  inline const T& operator()() const { return value; }
-  inline T& operator()() { return value; }
-  inline bool valid() const { return isValid; }
+  const T& operator()() const { return value; }
+  T& operator()() { return value; }
+  bool valid() const { return isValid; }
 
   void operator()(T newValue) {
     value = std::move(newValue);
@@ -85,7 +85,7 @@ public:
   void clearShiftsEtc();
 
   // convenience methods
-  inline cv::Rect refimgRectangle() const
+  cv::Rect refimgRectangle() const
     { return cv::Rect(cv::Point(0, 0), refimg().size()); }
 };
 
