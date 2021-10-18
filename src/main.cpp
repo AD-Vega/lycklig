@@ -24,7 +24,7 @@
 #include <omp.h>
 #include <Magick++.h>
 #include "imageops.h"
-#include "lucky.h"
+#include "dedistort.h"
 #include "globalregistrator.h"
 #include "rbfwarper.h"
 #include "registrationparams.h"
@@ -45,7 +45,7 @@ int main(const int argc, const char *argv[]) {
   registrationContext context;
 
   // Resolve stage dependencies.
-  bool need_patches = params.stage_patches || params.stage_lucky;
+  bool need_patches = params.stage_patches || params.stage_dedistort;
   bool need_refimg = params.stage_refimg || need_patches;
 
   // If an output image will be created, check whether the destination can
@@ -142,7 +142,7 @@ int main(const int argc, const char *argv[]) {
 
   // From now on, we will only store a black&white version of the reference
   // image. Pushing a new reference image into the registration context
-  // means invalidating any further data (registration points, lucky imaging
+  // means invalidating any further data (registration points, dedistortion
   // shifts), so we will only do that if
   //   a) the creation of a new reference image was explicitly requested
   //   b) we currently don't have one, but need it in further stages
@@ -156,7 +156,7 @@ int main(const int argc, const char *argv[]) {
       refimg = rawRef;
     context.refimg(refimg);
 
-    // Changing the reference image invalidates lucky imaging registration
+    // Changing the reference image invalidates dedistortion registration
     // points.
     std::cerr << "New reference image created\n";
     context.clearPatchesEtc();
@@ -164,7 +164,7 @@ int main(const int argc, const char *argv[]) {
 
   // Check whether we need to override context.boxsize() with a value from
   // the command line. If there is a conflict, we invalidate any further data
-  // (registration points, lucky imaging shifts).
+  // (registration points, dedistortion shifts).
   if (need_patches && params.boxsize_override && context.boxsize.valid() &&
       params.boxsize != context.boxsize()) {
     std::cerr << "New boxsize specified on the command line\n";
@@ -194,31 +194,31 @@ int main(const int argc, const char *argv[]) {
     context.clearPatchesEtc();
   }
 
-  // lucky imaging registration points
+  // dedistortion registration points
   if (params.stage_patches || (need_patches && !context.patches.valid())) {
     context.boxsize(params.boxsize);
 
-    std::cerr << "Lucky imaging: creating registration patches\n";
+    std::cerr << "Dedistortion: creating registration patches\n";
     auto patches = selectPointsHex(params, context, patchCreationArea);
     patches = filterPatchesByQuality(patches, context.refimg());
     context.patches(patches);
     std::cerr << context.patches().size() << " valid patches\n";
 
-    // Changing the registration points invalidates lucky imaging shifts.
+    // Changing the registration points invalidates dedistortion shifts.
     context.clearShiftsEtc();
   }
 
-  if (params.stage_lucky || params.stage_stack) {
-    if (params.stage_lucky && params.stage_stack)
-      std::cerr << "Lucky imaging: registration, warping and stacking\n";
-    else if (params.stage_lucky)
-      std::cerr << "Lucky imaging: registration\n";
+  if (params.stage_dedistort || params.stage_stack) {
+    if (params.stage_dedistort && params.stage_stack)
+      std::cerr << "Dedistortion: registration, warping and stacking\n";
+    else if (params.stage_dedistort)
+      std::cerr << "Dedistortion: registration\n";
     else if (params.stage_stack && context.shifts.valid())
-      std::cerr << "Stacking images (using data from lucky imaging)\n";
+      std::cerr << "Stacking images (using data from dedistortion)\n";
     else if (params.stage_stack)
-      std::cerr << "Stacking images (no lucky imaging)\n";
+      std::cerr << "Stacking images (no dedistortion)\n";
 
-    Mat finalsum = lucky(params, context, true);
+    Mat finalsum = stack(params, context, true);
     // Only save the result if there is something to save.
     if (params.stage_stack) {
       std::cerr << "Saving output to '" << params.output_file << "'\n";

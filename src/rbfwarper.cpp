@@ -126,7 +126,7 @@ void rbfWarper::prepareBases() {
     }
   }
   // Invert the matrix. The resulting matrix is then ready to be multiplied
-  // by a vector of lucky imaging shifts to yield the corresponding basis
+  // by a vector of dedistortion shifts to yield the corresponding basis
   // function weights.
   coeffs = coeffs.inv(DECOMP_CHOLESKY);
 }

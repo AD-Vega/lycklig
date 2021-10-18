@@ -30,7 +30,7 @@ public:
   bool stage_prereg = false;
   bool stage_refimg = false;
   bool stage_patches = false;
-  bool stage_lucky = false;
+  bool stage_dedistort = false;
   bool stage_stack = false;
 
   // global registration
@@ -45,7 +45,7 @@ public:
   int boxsize = 60;
   bool boxsize_override = false;
 
-  // lucky imaging
+  // dedistortion
   unsigned int maxmove = 20;
 
   // interpolation + stacking

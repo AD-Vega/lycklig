@@ -113,7 +113,7 @@ void registrationContext::clearPatchesEtc() {
 
 void registrationContext::clearShiftsEtc() {
   if (shifts.valid())
-    std::cerr << "  Invalidating existing lucky imaging shifts\n";
+    std::cerr << "  Invalidating existing dedistortion shifts\n";
   shifts.invalidate();
 }
 
@@ -172,5 +172,5 @@ void registrationContext::printReport() const {
     std::cerr << "  * " << patches().size() << " registration points (boxsize "
       << boxsize() << ")\n";
   if (shifts.valid())
-    std::cerr << "  * lucky imaging shifts\n";
+    std::cerr << "  * dedistortion shifts\n";
 }

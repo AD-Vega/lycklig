@@ -62,7 +62,7 @@ bool registrationParams::parse(const int argc, const char* argv[])
 
     // reference image
     TCLAP::SwitchArg arg_refimg(
-      "r", "refimg", "Create a reference image to be used as a template for lucky imaging.", stage_refimg);
+      "r", "refimg", "Create a reference image to be used as a template for dedistortion.", stage_refimg);
     cmd.add(arg_refimg);
     TCLAP::SwitchArg arg_only_refimg(
       "n", "only-refimg", "Only roughly stack (possibly pre-registered) images (implies --refimg).", only_refimg);
@@ -74,18 +74,18 @@ bool registrationParams::parse(const int argc, const char* argv[])
 
     // registration points
     TCLAP::SwitchArg arg_patches(
-      "a", "patches", "Create registration points for lucky imaging.", stage_patches);
+      "a", "patches", "Create registration points for dedistortion.", stage_patches);
     cmd.add(arg_patches);
     TCLAP::ValueArg<unsigned int> arg_boxsize(
       "b", "boxsize", "Box size " + defval(boxsize), false, boxsize, "pixels");
     cmd.add(arg_boxsize);
 
-    // lucky imaging
-    TCLAP::SwitchArg arg_lucky(
-      "l", "lucky", "Lucky imaging.", stage_lucky);
-    cmd.add(arg_lucky);
+    // dedistortion
+    TCLAP::SwitchArg arg_dedistortion(
+      "d", "dedistort", "Dedistortion.", stage_dedistort);
+    cmd.add(arg_dedistortion);
     TCLAP::ValueArg<unsigned int> arg_maxmove(
-      "m", "maxmove", "Maximum displacement in lucky imaging " + defval(maxmove), false, maxmove, "pixels");
+      "m", "maxmove", "Maximum displacement in dedistortion " + defval(maxmove), false, maxmove, "pixels");
     cmd.add(arg_maxmove);
 
     // interpolation + stacking
@@ -135,7 +135,7 @@ bool registrationParams::parse(const int argc, const char* argv[])
       stage_prereg = true;
     stage_refimg = arg_refimg.isSet();
     stage_patches = arg_patches.isSet();
-    stage_lucky = arg_lucky.isSet();
+    stage_dedistort = arg_dedistortion.isSet();
     stage_stack = arg_stack.isSet();
 
     // options

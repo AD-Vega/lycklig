@@ -20,7 +20,7 @@
 #include <algorithm>
 #include <tuple>
 #include "imageops.h"
-#include "lucky.h"
+#include "dedistort.h"
 
 using namespace cv;
 
@@ -287,15 +287,15 @@ Mat1f findShifts(const Mat& img,
 }
 
 
-// Lucky imaging + stacking.
+// Dedistortion + stacking.
 //
 // These are, in principle, two separate operations. However, to minimize the
 // number of needed image reads (and conversions), they are performed in a
-// single parallelized loop. Parts of the loop specific to lucky imaging or
+// single parallelized loop. Parts of the loop specific to dedistortion or
 // stacking are in conditionals to allow the user to request only one operation
 // to be performed.
 //
-Mat lucky(const registrationParams& params,
+Mat stack(const registrationParams& params,
           registrationContext& context,
           const bool showProgress)
 {
@@ -307,7 +307,7 @@ Mat lucky(const registrationParams& params,
 
   imageSumLookup refsqLookup;
   std::vector<Mat1f> allShifts;
-  if (params.stage_lucky) {
+  if (params.stage_dedistort) {
     // Shifts will be computed during this run.
     allShifts.resize(context.images().size());
     refsqLookup = imageSumLookup(refimg.mul(refimg));
@@ -357,7 +357,7 @@ Mat lucky(const registrationParams& params,
       Mat inputImage = magickImread(image.filename);
 
       // LUCKY IMAGING: main operation
-      if (params.stage_lucky) {
+      if (params.stage_dedistort) {
         Mat1f img;
         if (inputImage.channels() > 1)
           cvtColor(inputImage, img, COLOR_BGR2GRAY);
@@ -395,7 +395,7 @@ Mat lucky(const registrationParams& params,
           img = paddedImg;
         }
 
-        // Find lucky imaging shifts.
+        // Find shifts for dedistortion.
         allShifts.at(ifile) =
           findShifts(img, totalArea, searchOverlap, context.patches(),
                      multiplier, matcher);
@@ -403,7 +403,7 @@ Mat lucky(const registrationParams& params,
 
       // STACKING: main operation
       if (params.stage_stack) {
-        const Mat1f shifts(params.stage_lucky || context.shifts.valid() ?
+        const Mat1f shifts(params.stage_dedistort || context.shifts.valid() ?
                            allShifts.at(ifile) : Mat());
         Mat warpedImg, warpedNormalization;
         std::tie(warpedImg, warpedNormalization) =
@@ -432,7 +432,7 @@ Mat lucky(const registrationParams& params,
     std::fprintf(stderr, "\n");
 
   // LUCKY IMAGING: pass the results to registrationContext
-  if (params.stage_lucky)
+  if (params.stage_dedistort)
     context.shifts(allShifts);
 
   if (params.stage_stack) {

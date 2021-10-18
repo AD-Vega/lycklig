@@ -75,7 +75,7 @@ patchCollection filterPatchesByQuality(const patchCollection& patches,
 
 cv::Mat drawPoints(const cv::Mat& img, const patchCollection& patches);
 
-cv::Mat lucky(const registrationParams& params,
+cv::Mat stack(const registrationParams& params,
               registrationContext& context,
               const bool showProgress = false);
 
