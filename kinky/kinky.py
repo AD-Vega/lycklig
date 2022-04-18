@@ -203,7 +203,8 @@ class HelpWidget(QWidget):
         tdoc.setTextWidth(width)
         size = tdoc.size()
         margin = 20
-        size = QSize(size.width() + 2*margin, size.height() + 2*margin)
+        size = QSize(int(size.width() + 2*margin),
+                     int(size.height() + 2*margin))
         label.setMargin(margin)
         label.setMaximumSize(size)
         label.setMinimumSize(size)
