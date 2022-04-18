@@ -85,8 +85,9 @@ def loadImage(filename):
     if len(img.shape) != 3:
         img = img.reshape(*img.shape, 1)
     img = img[:, :, ::-1]
+    depth = img.dtype.itemsize * 8
     img = np.array(img, dtype=float)
-    return img, img.dtype.itemsize
+    return img, depth
 
 def saveImage(img, filename):
     """Read the provided numpy.ndarray of shape (height, width, colors), convert
