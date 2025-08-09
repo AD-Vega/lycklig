@@ -16,6 +16,9 @@ pkg_check_modules(MAGICK REQUIRED IMPORTED_TARGET Magick++)
 find_package(Boost REQUIRED COMPONENTS filesystem system)
 find_package(OpenMP REQUIRED)
 
+# Add Eigen submodule
+add_subdirectory(eigen)
+
 add_executable(lycklig
   src/cookedtemplate.cpp
   src/globalregistrator.cpp
@@ -39,6 +42,7 @@ target_link_libraries(lycklig PRIVATE
   Boost::filesystem
   Boost::system
   OpenMP::OpenMP_CXX
+  Eigen3::Eigen
 )
 
 configure_file(
