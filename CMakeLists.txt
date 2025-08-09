@@ -1,15 +1,20 @@
-project(lycklig)
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.16)
+project(lycklig
+    VERSION 1.0.0
+    DESCRIPTION "Astronomical image processing pipeline for lucky imaging"
+    LANGUAGES CXX)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(OpenCV REQUIRED)
-include(FindPkgConfig)
-pkg_check_modules(PKGCONFS REQUIRED tclap Magick++)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(TCLAP REQUIRED IMPORTED_TARGET tclap)
+pkg_check_modules(MAGICK REQUIRED IMPORTED_TARGET Magick++)
 find_package(Boost REQUIRED COMPONENTS filesystem system)
-
-string(REPLACE ";" " " PKGCONFS_CFLAGS "${PKGCONFS_CFLAGS}")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -fopenmp ${PKGCONFS_CFLAGS}")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -O3")
+find_package(OpenMP REQUIRED)
 
 add_executable(lycklig
   src/cookedtemplate.cpp
@@ -23,10 +28,17 @@ add_executable(lycklig
   src/registrationparams.cpp
 )
 
-target_link_libraries(lycklig
+target_compile_options(lycklig PRIVATE -Wall)
+target_compile_options(lycklig PRIVATE "$<$<CONFIG:Release>:-O3>")
+target_compile_options(lycklig PRIVATE "$<$<CONFIG:RelWithDebInfo>:-O3>")
+
+target_link_libraries(lycklig PRIVATE
   ${OpenCV_LIBS}
-  ${PKGCONFS_LDFLAGS}
-  ${Boost_LIBRARIES}
+  PkgConfig::TCLAP
+  PkgConfig::MAGICK
+  Boost::filesystem
+  Boost::system
+  OpenMP::OpenMP_CXX
 )
 
 configure_file(
