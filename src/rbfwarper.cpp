@@ -17,6 +17,7 @@
  */
 
 #include <opencv2/imgproc/imgproc.hpp>
+#include <Eigen/Dense>
 #include <limits>
 #include "rbfwarper.h"
 
@@ -32,7 +33,6 @@ rbfWarper::rbfWarper(const patchCollection& patches_,
   imagesize(targetRect.size()*supersampling_),
   sigma(sigma_*supersampling_), supersampling(supersampling_),
   normalizationMask(Mat::ones(inputImageSize, CV_32F)),
-  coeffs(patches.size(), patches.size()),
   xshiftbase(imagesize), yshiftbase(imagesize)
 {
   for (int y = 0; y < imagesize.height; y++) {
@@ -101,6 +101,7 @@ void rbfWarper::prepareBases() {
 
   // In this loop, we prepare the matrix that will be inverted to solve the
   // equations for the basis coefficients.
+  Eigen::SparseMatrix<float> coeffs(patches.size(), patches.size());
   for (int i = 0; i < (signed)patches.size(); i++) {
     Point baseCenter = (patches.at(i).center() - targetF) * supersampling;
 
@@ -114,21 +115,25 @@ void rbfWarper::prepareBases() {
     Point2f patchCenter = (patches.at(i).center() - targetF) * supersampling;
     Point2f centerDiff = patchCenter - baseCenterF;
     float centerDistSq = pow(centerDiff.x, 2) + pow(centerDiff.y, 2);
-    coeffs.at<float>(i, i) = exp(-0.5*centerDistSq/sigmasq);
+    coeffs.insert(i, i) = exp(-0.5*centerDistSq/sigmasq);
 
     // Determine the off-diagonal coefficients for the current basis function.
+    // Only the upper triangle is used, and elements close to zero are discarded.
     for (int j = i+1; j < (signed)patches.size(); j++) {
       Point2f diff = patches.at(j).center() - patches.at(i).center();
       diff *= supersampling;
       float distanceSq = pow(diff.x, 2) + pow(diff.y, 2);
-      coeffs.at<float>(i, j) = coeffs.at<float>(j, i) =
-         exp(-0.5*distanceSq/sigmasq);
+      auto val = exp(-0.5*distanceSq/sigmasq);
+      // The following threshold was chosen experimentally to yield results
+      // close to the old code.
+      if (val > 1e-16)
+        coeffs.insert(i, j) = val;
     }
   }
-  // Invert the matrix. The resulting matrix is then ready to be multiplied
-  // by a vector of dedistortion shifts to yield the corresponding basis
-  // function weights.
-  coeffs = coeffs.inv(DECOMP_CHOLESKY);
+
+  // Run the solver, which uses Cholesky decomposition. Our matrix is
+  // self-adjoint and positive-definite, after all.
+  solver.compute(coeffs);
 }
 
 
@@ -139,15 +144,28 @@ rbfWarper::warp(const Mat& image,
   Mat xField, yField;
 
   if (!shifts.empty()) {
-    Mat1f weights(coeffs * shifts);
+    if (!shifts.isContinuous()) {
+      throw std::logic_error("OpenCV matrices are expected to be continuous.");
+    }
+
+    // Use row-major layour for OpenCV compat.
+    using Matrix = Eigen::Matrix<float, Eigen::Dynamic, 2, Eigen::RowMajor>;
+    Matrix weights{shifts.rows, shifts.cols};
+    auto *rawdata = reinterpret_cast<float*>(shifts.data);
+    Eigen::Map<Matrix> eshifts{rawdata, shifts.rows, shifts.cols};
+    for (int i = 0; i < shifts.cols; ++i) {
+      using Eigen::placeholders::all;
+      weights(all, i) = solver.solve(eshifts(all, i));
+    }
+
     Mat xshiftPoints = Mat::zeros(basesRect.size(), CV_32F);
     Mat yshiftPoints = Mat::zeros(basesRect.size(), CV_32F);
 
     for (int i = 0; i < (signed)patches.size(); i++) {
       Point baseCenter = patches.at(i).center() * supersampling;
       baseCenter -= basesRect.tl();
-      xshiftPoints.at<float>(baseCenter) = weights.at<float>(i, 0);
-      yshiftPoints.at<float>(baseCenter) = weights.at<float>(i, 1);
+      xshiftPoints.at<float>(baseCenter) = weights.coeff(i, 0);
+      yshiftPoints.at<float>(baseCenter) = weights.coeff(i, 1);
     }
 
     Mat xshift(basesRect.size(), CV_32F);

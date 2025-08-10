@@ -19,6 +19,8 @@
 #ifndef RBFWARPER_H
 #define RBFWARPER_H
 
+#include <Eigen/Sparse>
+#include <Eigen/SparseCholesky>
 #include <utility>
 #include "imagepatch.h"
 
@@ -46,7 +48,7 @@ private:
   const float sigma;
   const int supersampling;
   const cv::Mat1f normalizationMask;
-  cv::Mat1f coeffs;
+  Eigen::SimplicialLDLT<Eigen::SparseMatrix<float>, Eigen::Upper> solver;
   cv::Mat1f xshiftbase;
   cv::Mat1f yshiftbase;
   cv::Rect basesRect;
