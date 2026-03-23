@@ -77,8 +77,8 @@ void rbfWarper::prepareBases() {
     if (y > br.y)
       br.y = y;
   }
-  tl = (tl - targetF) * supersampling;
-  br = (br - targetF) * supersampling;
+  tl *= supersampling;
+  br *= supersampling;
   int minx = floor(tl.x);
   int miny = floor(tl.y);
   int maxx = ceil(br.x);
@@ -86,8 +86,8 @@ void rbfWarper::prepareBases() {
 
   // Determine the size of the rectangle that contains all the basis function
   // centers and the destination image.
-  Rect allCenters(minx, miny, maxx + 1, maxy + 1);
-  Rect targetRect(targetOrigin, imagesize);
+  Rect allCenters(minx, miny, maxx - minx + 1, maxy - miny + 1);
+  Rect targetRect(targetOrigin * supersampling, imagesize);
   basesRect = allCenters | targetRect;
 
   // Create the 1D Gaussian kernel.
@@ -175,8 +175,9 @@ rbfWarper::warp(const Mat& image,
     sepFilter2D(yshiftPoints, yshift, -1, gaussianKernel, gaussianKernel,
                 Point(-1,-1), 0, BORDER_CONSTANT);
 
-    xField = xshift(Rect(targetOrigin, imagesize)) + xshiftbase + globalShift.x;
-    yField = yshift(Rect(targetOrigin, imagesize)) + yshiftbase + globalShift.y;
+    Point roiOrigin = targetOrigin * supersampling - basesRect.tl();
+    xField = xshift(Rect(roiOrigin, imagesize)) + xshiftbase + globalShift.x;
+    yField = yshift(Rect(roiOrigin, imagesize)) + yshiftbase + globalShift.y;
   }
   else {
     xField = xshiftbase + globalShift.x;
