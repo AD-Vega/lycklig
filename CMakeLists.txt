@@ -13,7 +13,7 @@ find_package(OpenCV REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(TCLAP REQUIRED IMPORTED_TARGET tclap)
 pkg_check_modules(MAGICK REQUIRED IMPORTED_TARGET Magick++)
-find_package(Boost REQUIRED COMPONENTS filesystem system)
+find_package(Boost REQUIRED COMPONENTS filesystem)
 find_package(OpenMP REQUIRED)
 
 # Add Eigen submodule
@@ -40,7 +40,6 @@ target_link_libraries(lycklig PRIVATE
   PkgConfig::TCLAP
   PkgConfig::MAGICK
   Boost::filesystem
-  Boost::system
   OpenMP::OpenMP_CXX
   Eigen3::Eigen
 )
